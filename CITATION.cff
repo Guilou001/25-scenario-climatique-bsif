@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: "Le module de crédit de l'exercice normalisé de scénarios climatiques du BSIF, recalculé et vérifié"
+message: "Si vous utilisez ce dépôt, citez-le comme suit."
+type: software
+authors:
+  - family-names: Vaudescal
+    given-names: Guillaume
+repository-code: "https://github.com/Guilou001/25-scenario-climatique-bsif"
+license: MIT
+version: 1.0.0
+date-released: "2026-08-30"

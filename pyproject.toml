@@ -1,0 +1,47 @@
+[project]
+name = "scc"
+version = "1.0.0"
+description = "Le module de crédit de l'exercice normalisé de scénarios climatiques du BSIF, recalculé depuis les formules publiées et vérifié contre l'exemple officiel"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Guillaume Vaudescal" }]
+dependencies = [
+    "gvf[figures]>=0.2",
+    "matplotlib>=3.9",
+    "numpy>=2.0",
+    "openpyxl>=3.1",
+    "pandas>=2.2",
+    "scipy>=1.13",
+    "truststore>=0.9",
+    "typer>=0.12",
+]
+
+[project.scripts]
+scc = "scc.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/Guilou001/25-scenario-climatique-bsif"
+
+[tool.uv.sources]
+gvf = { git = "https://github.com/Guilou001/gv-fintools", tag = "v0.2.0" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scc"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
