@@ -281,6 +281,8 @@ Jon Frye et Michael Jacobs (2012), telle que la méthode du BSIF la prescrit. Co
 rapport sous licence CC BY 4.0. Figures produites par
 [gv-fintools](https://github.com/Guilou001/gv-fintools), la couche partagée du portefeuille.
 
+Le rapport `rapport/rapport.pdf` est engendré depuis ce README, une seule source et deux formes.
+
 Voisinage dans le portefeuille : [10-credit-bancaire](https://github.com/Guilou001/10-credit-bancaire)
 porte le modèle de probabilité de défaut et la perte attendue IFRS 9 hors climat, et
 [17-alm-assurance-vie](https://github.com/Guilou001/17-alm-assurance-vie) porte le module de taux du
