@@ -22,10 +22,6 @@ from .sensibilite import ECHEANCES, hausse_de_probabilite, milieu_de_seau
 DEST = Path("results/figures")
 
 
-def _seau_de(p: float) -> int:
-    return next(n for n, bas, haut in SEAUX if bas <= p < haut)
-
-
 def fig_exemple(dest: Path = DEST) -> dict:
     """La perte attendue de l'exemple officiel, calculée contre publiée, aux quatre horizons.
 
@@ -139,8 +135,17 @@ def fig_carte(table, dest: Path = DEST) -> dict:
 
 
 def fig_secteurs(variations, dest: Path = DEST) -> dict:
-    """Le résultat net par secteur en 2050, recalculé, avec les deux valeurs publiées en regard."""
+    """Le résultat net par secteur en 2050, recalculé, avec les deux valeurs publiées en regard.
+
+    Les lignes marquées `agregat` sont retirées. « Pétrole et gaz » est la somme de « Pétrole » et
+    de « Gaz », au dernier chiffre publié près, et les trois côte à côte feraient compter deux fois
+    la même activité.
+    """
     appliquer()
+    ecartes = []
+    if "agregat" in variations.columns:
+        ecartes = list(variations.loc[variations["agregat"], "secteur"])
+        variations = variations[~variations["agregat"]]
     fig, ax = plt.subplots(figsize=(9.2, 5.2))
     positions = np.arange(len(variations))
     couleurs = [OKABE_ITO[3] if v < 0 else OKABE_ITO[2] for v in variations["variation_pct"]]
@@ -164,7 +169,7 @@ def fig_secteurs(variations, dest: Path = DEST) -> dict:
     ax.set_title("Le premier maillon du rapport se refait depuis le fichier public")
     enregistrer(fig, dest, "secteurs_2050")
     plt.close(fig)
-    return {"secteurs": int(len(variations))}
+    return {"secteurs": int(len(variations)), "agregats_ecartes": ecartes}
 
 
 def fig_cascade(net, dest: Path = DEST) -> dict:
@@ -175,7 +180,7 @@ def fig_cascade(net, dest: Path = DEST) -> dict:
     milliards, seule unité dans laquelle un lecteur reconnaît un ordre de grandeur.
 
     Les deux volets partagent leurs limites verticales, mais elles sont posées APRÈS les deux
-    cascades et non par `sharey` : avec `sharey`, le second volet écrase les limites du premier et
+    cascades et non par `sharey`. Avec `sharey`, le second volet écrase les limites du premier, et
     ses barres sortent du cadre sans que rien ne le signale.
     """
     appliquer()
@@ -204,8 +209,8 @@ def fig_cascade(net, dest: Path = DEST) -> dict:
 def fig_merton(dest: Path = DEST) -> dict:
     """Le levier et la probabilité de défaut de départ qu'il faudrait pour retrouver +450 %.
 
-    Deux axes, parce que les deux grandeurs ne se lisent pas dans la même unité : le levier à
-    gauche, la probabilité de défaut de départ à droite, qui est celle qui se compare à une notation.
+    Deux axes, parce que les deux grandeurs ne se lisent pas dans la même unité. Le levier est à
+    gauche et la probabilité de défaut de départ à droite, celle qui se compare à une notation.
     """
     appliquer()
     volatilites, leviers, depart = courbe_levier()
@@ -236,8 +241,11 @@ def fig_merton(dest: Path = DEST) -> dict:
     lignes = ax.get_lines() + second.get_lines()
     ax.legend(lignes, [ligne.get_label() for ligne in lignes], loc="lower left")
     fini = np.isfinite(depart)
+    # le titre se déduit des données plutôt que d'être écrit à la main : une version figée annonçait
+    # « une fois sur dix » et a survécu à une correction qui portait la plage à une fois sur six
+    sur = round(1.0 / (haut / 100.0))
     ax.set_title("Pour que la probabilité de défaut quintuple, il faut un emprunteur qui défaille "
-                 "déjà une fois sur dix")
+                 f"déjà une fois sur {sur}")
     enregistrer(fig, dest, "inversion_merton")
     plt.close(fig)
     return {"pd_depart_min_pct": float(100 * np.nanmin(depart[fini])),

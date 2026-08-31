@@ -10,9 +10,9 @@ probabilité est petite, la cote est presque la probabilité, si bien que la pro
 multipliée par ce facteur. Quand la probabilité est grande, la cote est bien plus grande que la
 probabilité, et la même multiplication de la cote déplace beaucoup moins la probabilité.
 
-Autrement dit, **une majoration constante sur l'échelle logit fait monter en proportion la
-probabilité de défaut d'un bon emprunteur plus que celle d'un mauvais**. Ce module le mesure, sur la
-seule colonne de majorations que le BSIF publie.
+Autrement dit, une majoration constante sur l'échelle logit fait monter en proportion la probabilité
+de défaut d'un bon emprunteur plus que celle d'un mauvais. Ce module le mesure, sur la seule colonne
+de majorations que le BSIF publie.
 """
 
 from __future__ import annotations
@@ -21,22 +21,42 @@ import numpy as np
 import pandas as pd
 
 from .exemple import majorations_de
-from .scse import SEAUX, Exposition, ecl_climatique, ecl_de_reference, logit, sigmoide
+from .scse import (
+    SEAUX,
+    Exposition,
+    ecl_climatique,
+    ecl_de_reference,
+    logit,
+    pd_climatiques,
+    perte_attendue,
+    sigmoide,
+)
 
 LGD_TYPE = 0.45          # perte en cas de défaut d'un prêt d'entreprise sans sûreté, hypothèse déclarée
 TAUX_TYPE = 0.05         # taux d'actualisation, hypothèse déclarée
 ECHEANCES = (1, 3, 5, 7, 10, 15, 20)
 
 
+PLANCHER = 1e-4          # la borne basse du premier seau, voir `milieu_de_seau`
+PLAFOND = 0.40           # la borne haute du dernier seau, voir `milieu_de_seau`
+
+
 def milieu_de_seau(numero: int) -> float:
-    """Le milieu géométrique d'un seau de qualité, borne haute du dernier seau ramenée à 40 %.
+    """Le milieu géométrique d'un seau de qualité, ses deux bornes extrêmes ramenées à des valeurs finies.
 
     Le milieu géométrique et non arithmétique, parce que les bornes des seaux croissent en ordre de
     grandeur : entre 0,25 % et 1 %, le milieu qui a un sens est 0,5 % et non 0,625 %.
+
+    Deux bornes du BSIF ne se prêtent pas à cette moyenne, et les deux sont remplacées ici. Le
+    premier seau part de zéro, dont le milieu géométrique n'existe pas : il est relevé à 1 point de
+    base, ce qui donne la probabilité de 0,03 % du premier seau. Le dernier seau monte à 100 %, ce
+    qui décrirait un emprunteur déjà en défaut : il est ramené à 40 %. Les deux sont des hypothèses,
+    et le premier n'est pas neutre. Mesuré en faisant varier le plancher de 1e-3 à 1e-6, la hausse
+    du seau 1 à vingt ans va de 9,342 % à 9,221 % et le rapport entre extrêmes de 5,902 à 5,825.
     """
     bas, haut = next((b, h) for n, b, h in SEAUX if n == numero)
-    bas = max(bas, 1e-4)
-    haut = min(haut, 0.40)
+    bas = max(bas, PLANCHER)
+    haut = min(haut, PLAFOND)
     return float(np.sqrt(bas * haut))
 
 
@@ -53,7 +73,7 @@ def exposition_type(pd_conditionnelle: float, annees: int, lgd: float = LGD_TYPE
                     taux: float = TAUX_TYPE) -> Exposition:
     """Un prêt d'entreprise stylisé : hasard de défaut constant, exposition constante, un scénario.
 
-    Le hasard constant est l'hypothèse la plus neutre possible : elle ne met aucune structure par
+    Le hasard constant est l'hypothèse la plus neutre possible. Elle ne met aucune structure par
     terme dans le résultat, si bien que ce que la carte montre vient de la formule du BSIF et de rien
     d'autre.
     """
@@ -68,9 +88,9 @@ def carte(horizon: int = 2045, echeances=ECHEANCES) -> pd.DataFrame:
     """La hausse de la perte attendue, en pourcentage, par seau de qualité et par échéance.
 
     Une ligne par seau, une colonne par échéance en années. Les majorations sont celles du charbon
-    canadien au seau 4, seule colonne publiée : elles sont appliquées à tous les seaux, ce qui est
-    une hypothèse et non une lecture du BSIF, et qui est exactement ce qu'il faut pour isoler l'effet
-    de la formule.
+    canadien au seau 4, seule colonne publiée, et elles sont appliquées à tous les seaux. C'est une
+    hypothèse et non une lecture du BSIF, et c'est exactement ce qu'il faut pour isoler l'effet de la
+    formule.
     """
     lignes = []
     for numero, _, _ in SEAUX:
@@ -101,3 +121,35 @@ def par_horizon(seau: int = 4, annees: int = 6) -> pd.DataFrame:
                    exposition, majorations_de(h, annees))["ponderee"] / reference - 1.0)}
               for h in HORIZONS]
     return pd.DataFrame(lignes).set_index("horizon")
+
+
+def reconciliation(horizon: int = 2045, annees: int = 20) -> pd.DataFrame:
+    """Ce qui sépare le plafond de la figure de la mécanique des hausses de la carte.
+
+    Deux différences, et un seul tableau pour les deux. La figure ne porte qu'une majoration, celle
+    de 2046, et ne fait monter que la probabilité de défaut. La carte emploie tout le chemin de
+    majorations, de 2046 à 2050 puis prolongé, et porte la perte attendue, perte en cas de défaut
+    comprise. D'où deux plafonds, `exp(0,076 043) - 1` pour la figure et `exp(0,086 700) - 1` pour le
+    chemin, et une colonne de plus entre la hausse de la seule probabilité et celle de la perte
+    attendue.
+    """
+    majorations = majorations_de(horizon, annees)
+    lignes = []
+    for numero, _, _ in SEAUX:
+        p = milieu_de_seau(numero)
+        exposition = exposition_type(p, annees)
+        pd_clim = pd_climatiques(exposition.pd_par_scenario["unique"], majorations)
+        reference = ecl_de_reference(exposition)["ponderee"]
+        sans_lgd = perte_attendue(pd_clim, exposition.lgd, exposition.ead,
+                                  exposition.taux_actualisation)["totale"]
+        avec_lgd = ecl_climatique(exposition, majorations)["ponderee"]
+        lignes.append({
+            "seau": numero,
+            "hausse_pd_majoration_2046_pct": float(hausse_de_probabilite(p, majorations[0])),
+            "hausse_ecl_sans_ajustement_lgd_pct": 100.0 * (sans_lgd / reference - 1.0),
+            "hausse_ecl_pct": 100.0 * (avec_lgd / reference - 1.0),
+        })
+    table = pd.DataFrame(lignes).set_index("seau")
+    table["plafond_majoration_2046_pct"] = 100.0 * (np.exp(majorations[0]) - 1.0)
+    table["plafond_chemin_complet_pct"] = 100.0 * (np.exp(majorations.max()) - 1.0)
+    return table

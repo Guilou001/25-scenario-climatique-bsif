@@ -1,7 +1,7 @@
 """Le module de crédit de l'exercice normalisé, écrit depuis les formules publiées par le BSIF.
 
 L'**exercice normalisé de scénarios climatiques** est le calcul que le Bureau du surintendant des
-institutions financières impose depuis 2024 à toutes les institutions financières fédérales : chacune
+institutions financières impose depuis 2024 à toutes les institutions financières fédérales. Chacune
 doit dire de combien sa perte de crédit attendue se déplacerait sous trois trajectoires de transition
 climatique, à quatre horizons. Le BSIF publie la méthode, le classeur à remplir et un exemple
 travaillé complet. Ce module est cet exemple, réécrit en Python.
@@ -15,11 +15,11 @@ Quatre formules suffisent, et elles s'enchaînent dans cet ordre.
 2. **Ajouter la majoration climatique sur l'échelle logit.** Le logit d'une probabilité est le
    logarithme de sa cote, `ln(p / (1 - p))`. Le BSIF prescrit une majoration par secteur, région et
    seau de qualité, et elle s'ajoute au logit, jamais à la probabilité elle-même. C'est ce choix qui
-   garantit que le résultat reste entre zéro et un, et c'est aussi lui qui produit le seul résultat
-   surprenant de ce dépôt.
+   garantit que le résultat reste entre zéro et un, et c'est aussi lui qui fait monter en proportion
+   la probabilité de défaut d'un bon emprunteur plus que celle d'un mauvais.
 3. **Revenir à l'inconditionnel** en remultipliant par les survies climatiques.
 4. **Ajuster la perte en cas de défaut par la relation de Frye-Jacobs**, qui lie perte et probabilité
-   de défaut par un seul paramètre : quand la probabilité de défaut monte, la perte en cas de défaut
+   de défaut par un seul paramètre. Quand la probabilité de défaut monte, la perte en cas de défaut
    monte aussi, parce que les défaillances se concentrent dans les mauvaises années où les garanties
    valent moins.
 
@@ -95,7 +95,7 @@ def lgd_frye_jacobs(pd_climatique, pd_initiale, lgd_initiale) -> np.ndarray:
     Elle dit une chose simple : la perte attendue, produit de la probabilité de défaut et de la
     perte en cas de défaut, se déplace le long d'une même courbe quand le risque monte. Comme la
     probabilité de défaut monte plus vite que la perte attendue, la perte en cas de défaut monte
-    aussi, mais peu : sur l'exemple du BSIF, 80,00 % devient 80,24 % pour une probabilité de défaut
+    aussi, mais peu. Sur l'exemple du BSIF, 80,00 % devient 80,24 % pour une probabilité de défaut
     qui passe de 4,00 % à 4,30 %.
     """
     pd_climatique = np.asarray(pd_climatique, dtype=float)

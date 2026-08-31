@@ -32,7 +32,7 @@
   #block(width: 100%)[
     #text(size: 18pt, weight: "bold")[L'exercice climatique du BSIF, recalculé : ce que la formule fait aux bons emprunteurs]
     #v(0.6em)
-    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-08-30 · #link("https://github.com/Guilou001/25-scenario-climatique-bsif")[Guilou001/25-scenario-climatique-bsif]]
+    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-08-31 · #link("https://github.com/Guilou001/25-scenario-climatique-bsif")[Guilou001/25-scenario-climatique-bsif]]
   ]
 ]
 #v(1.2em)
@@ -41,9 +41,9 @@
 
 Depuis 2024, toute institution financière fédérale canadienne doit rendre au BSIF un exercice normalisé de scénarios climatiques. Le régulateur publie sa méthode, son classeur et un exemple travaillé complet, et aucun dépôt public ne le calcule. Ce dépôt le calcule, le vérifie contre l'exemple officiel, puis pose la question que l'exemple ne pose pas.
 
-*Résultat en une phrase.* Le module de crédit de l'exercice est reproduit depuis les seules formules publiées, et retrouve les huit nombres de l'exemple officiel du BSIF *à moins d'un milliardième de dollar près* ; sur cette base, la majoration prescrite fait monter la perte de crédit attendue de *9,3 % pour un emprunteur de la meilleure qualité à vingt ans, contre 1,6 % pour le pire, soit 5,9 fois moins*, parce qu'une majoration constante sur l'échelle logit multiplie la cote de défaut et non la probabilité.
+*Résultat en une phrase.* Le module de crédit de l'exercice est reproduit depuis les seules formules publiées. Il retrouve les huit nombres de l'exemple officiel du BSIF *à moins d'un milliardième de dollar près*. Sur cette base, la majoration prescrite fait monter la perte de crédit attendue de *9,3 % pour un emprunteur de la meilleure qualité à vingt ans, contre 1,6 % pour le pire, soit 5,9 fois moins*. La raison tient à la forme de la formule. La majoration s'ajoute au logarithme de la cote de défaut, si bien qu'elle multiplie cette cote et non la probabilité.
 
-_Summary in English. A from-scratch implementation of the credit module of OSFI's Standardized Climate Scenario Exercise, reproducing every figure of the regulator's own worked example to within 1e-10 dollars, plus two extensions: a sensitivity map showing that a constant logit add-on raises expected credit loss 5.9 times more for the best credit quality bucket than for the worst at twenty years, and a Merton inversion of the 2022 BoC-OSFI pilot's published +450 % default probability._
+_Summary in English. A from-scratch implementation of the credit module of OSFI's Standardized Climate Scenario Exercise, reproducing every figure of the regulator's own worked example to under a billionth of a dollar, plus two extensions: a sensitivity map showing that a constant logit add-on raises expected credit loss 5.9 times more for the best credit quality bucket than for the worst at twenty years, and a Merton inversion of the 2022 BoC-OSFI pilot's published +450 % default probability._
 
 == 1. La question posée
 
@@ -51,7 +51,7 @@ Trois questions, dans l'ordre où elles se posent.
 
 *La première est de vérification.* Le BSIF publie une méthode en toutes lettres et un exemple chiffré. Un exercice réglementaire se code-t-il depuis ses formules seules, sans le tableur ? Si oui, tout intermédiaire du dépôt se compare à un nombre publié, et le dépôt cesse d'être une interprétation.
 
-*La deuxième est de fond.* Le régulateur prescrit une majoration de probabilité de défaut par secteur, région et qualité de crédit. Cette majoration s'ajoute au *logit* de la probabilité, le logarithme de sa cote. Quelle exposition en souffre le plus ? La réponse n'est pas celle qu'on attend, et elle est entièrement contenue dans la forme de la formule.
+*La deuxième est de fond.* Le régulateur prescrit une majoration de probabilité de défaut par secteur, région et qualité de crédit. Cette majoration s'ajoute au *logit* de la probabilité, le logarithme de sa cote. Quelle exposition en souffre le plus ? La réponse est entièrement contenue dans la forme de la formule.
 
 *La troisième est celle d'un chiffre resté seul.* Le rapport du projet pilote de 2022 annonce que les produits pétroliers raffinés voient leur probabilité de défaut monter de 450 % d'ici 2050. D'où vient ce nombre, et que faut-il supposer d'un emprunteur pour l'obtenir ?
 
@@ -67,15 +67,17 @@ Quatre apports.
 
 nombres de l'exemple officiel retrouvés.
 
-- *Une carte de sensibilité* qui n'existe nulle part : la hausse de perte attendue par seau de
+- *Une carte de sensibilité* qui n'existe nulle part : la hausse de perte attendue par \*\*seau de
 
-qualité de crédit et par échéance, sur la seule colonne de majorations publiée.
+qualité de crédit\*\*, la tranche de probabilité de défaut dans laquelle le BSIF range une exposition, et par échéance. Elle est calculée sur la seule colonne de majorations publiée.
 
 - *La reconstruction du premier maillon du rapport de 2022* depuis le fichier public, et la
 
 déclaration explicite que le second maillon n'est pas reconstructible.
 
 - *Une inversion de Merton* qui répond à une question différente de celle du rapport, et le dit.
+
+Elle fait apparaître un plafond que le rapport ne mentionne pas : exiger que la probabilité de défaut soit multipliée par 5,5 impose qu'elle vaille au moins 18,18 % avant le choc.
 
 Aucun dépôt public ne traite ce sujet. La recherche du 2026-08-30 sur « OSFI standardized climate scenario exercise » et « climate transition scenario credit » ne renvoie que deux dépôts, sans étoile, dont aucun ne lit le fichier canadien.
 
@@ -117,7 +119,7 @@ Comment lire ce tableau, en trois constats. Le premier est que la méthode elle-
 + *Passer à la probabilité conditionnelle.* La probabilité inconditionnelle de défaillir à l'année _i_ est celle de défaillir cette année-là vue d'aujourd'hui ; la conditionnelle est celle de défaillir sachant qu'on a survécu jusque-là. On divise donc par la survie accumulée. Sur l'exemple, 3,5 % en deuxième année sur une survie de 96 % donne 3,645 833 % de conditionnelle.
 + *Ajouter la majoration sur l'échelle logit.* Le *logit* d'une probabilité _p_ est #raw("ln(p / (1 − p))"), le logarithme de sa cote. La majoration prescrite s'y ajoute, ce qui garantit que le résultat reste entre zéro et un.
 + *Revenir à l'inconditionnel* en remultipliant par les survies climatiques.
-+ *Ajuster la perte en cas de défaut par la relation de Frye-Jacobs*, qui lie perte et probabilité de défaut par un seul paramètre : quand la probabilité monte, la perte en cas de défaut monte aussi, parce que les défaillances se concentrent dans les mauvaises années, où les garanties valent moins. Sur l'exemple, 80,00 % devient 80,24 % quand la probabilité passe de 4,00 % à 4,30 %.
++ *Ajuster la perte en cas de défaut par la relation de Frye-Jacobs*, qui lie perte et probabilité de défaut par un seul paramètre. Quand la probabilité monte, la perte en cas de défaut monte aussi, parce que les défaillances se concentrent dans les mauvaises années, où les garanties valent moins. Sur l'exemple, 80,00 % devient 80,24 % quand la probabilité passe de 4,00 % à 4,30 %.
 + *Sommer la perte actualisée* année par année, produit de la probabilité, de la perte en cas de défaut et de l'exposition, puis pondérer les trois scénarios macroéconomiques.
 
 == 5. Les résultats
@@ -169,7 +171,7 @@ L'exposition du cas est de trois millions de dollars sur le secteur du charbon a
     [-2,9e-11],
 )
 
-Comment lire ce tableau, en trois constats. Le premier est que l'écart le plus grand vaut 1,2e-10 dollar sur 173 324 dollars, soit un écart relatif de 7e-16 : c'est la précision de l'arithmétique flottante, donc l'égalité. Le deuxième est que les six probabilités et les six pertes en cas de défaut de l'horizon 2045 sont retrouvées elles aussi, la première série exactement, la seconde à 1,2e-15. Le troisième est que ces chiffres ne sont pas retapés à la main : la commande #raw("scc verifier") les ré-extrait du classeur téléchargé et compare, et les huit contrôles sortent « identique ».
+Comment lire ce tableau, en trois constats. Le premier est que l'écart le plus grand vaut 1,2e-10 dollar sur 173 324 dollars, soit un écart relatif de 7e-16 : c'est la précision de l'arithmétique flottante, donc l'égalité. Le deuxième est que les six probabilités et les six pertes en cas de défaut de l'horizon 2045 sont retrouvées elles aussi, la première série exactement, la seconde à 1,2e-15. Le troisième est que ces chiffres ne sont pas retapés à la main. La commande #raw("scc verifier") ré-extrait du classeur téléchargé les huit lignes de ce tableau, plus les probabilités, les pertes en cas de défaut, les expositions et les 21 majorations qui les produisent. Ses dix contrôles sortent tous « identique ». Ce que le tableau n'établit pas : l'exemple porte sur une seule exposition, et l'accord avec lui ne dit rien des cas que le BSIF ne déroule pas.
 
 #figure(image("../results/figures/exemple_bsif.png", width: 100%), caption: [Les quatre pertes attendues de l'exemple du BSIF, recalculées contre publiées])
 
@@ -177,7 +179,7 @@ Comment lire cette figure : chaque barre part de la perte attendue avant climat,
 
 === 5.2 La majoration frappe les bons emprunteurs, en proportion
 
-C'est le résultat que l'exemple officiel ne montre pas, parce qu'il ne porte que sur un seau de qualité. La majoration s'ajoute au logit, donc *multiplie la cote de défaut* par l'exponentielle de la majoration. Or la cote vaut presque la probabilité quand celle-ci est petite, et bien plus qu'elle quand elle est grande.
+C'est le résultat que l'exemple officiel ne montre pas, parce qu'il ne porte que sur un seau de qualité. La majoration s'ajoute au logit, donc multiplie la cote de défaut par l'exponentielle de la majoration. Cette cote vaut presque la probabilité quand celle-ci est petite, et bien plus qu'elle quand elle est grande.
 
 #table(
   columns: 5,
@@ -186,7 +188,7 @@ C'est le résultat que l'exemple officiel ne montre pas, parce qu'il ne porte qu
   inset: 5pt,
     [*Seau de qualité*],
     [*Probabilité de défaut annuelle*],
-    [*Hausse à 1 an*],
+    [*Hausse de la perte attendue à 1 an*],
     [*à 5 ans*],
     [*à 20 ans*],
     [1],
@@ -221,17 +223,21 @@ C'est le résultat que l'exemple officiel ne montre pas, parce qu'il ne porte qu
     [*1,58 %*],
 )
 
-Comment lire ce tableau, en trois constats. Le premier est que le rapport entre le meilleur et le pire seau passe de 1,08 à un an à *5,88 à vingt ans* : la formule ne traite pas les qualités de crédit de la même façon, et l'écart se creuse avec l'échéance. Le deuxième est le sens de cet écart, contraire à l'intuition : c'est le *bon* emprunteur dont la perte attendue monte le plus, en proportion. Le troisième est que l'effet de l'échéance change de signe selon le seau, croissant pour les trois premiers et décroissant pour les trois derniers, parce qu'un emprunteur fragile a peu de chances d'être encore là dans quinze ans, et que sa perte attendue lointaine pèse donc peu.
+Comment lire ce tableau, en trois constats. Le premier est que le rapport entre le meilleur et le pire seau passe de 1,08 à un an à *5,88 à vingt ans*. La formule ne traite donc pas les qualités de crédit de la même façon, et l'écart se creuse avec l'échéance. Les deux nombres en gras sont les deux termes de ce rapport et non les extrêmes de leur colonne : le maximum à vingt ans est le seau 2, à 9,34 %. Le deuxième constat est le sens de cet écart, contraire à l'intuition : c'est le bon emprunteur dont la perte attendue monte le plus, en proportion. Le troisième est que l'effet de l'échéance change de signe selon le seau, mais pas au même moment pour tous. Les seaux 1 et 2 montent jusqu'à vingt ans, le seau 3 culmine à dix ans, le seau 4 à cinq ans, et les seaux 5 et 6 décroissent dès la première année. Un emprunteur fragile a peu de chances d'être encore là dans quinze ans, et sa perte attendue lointaine pèse donc peu. Ce que le tableau n'établit pas : la majoration employée est celle d'un seul secteur, donc l'écart mesuré est celui de la formule et non celui du risque climatique propre à chaque seau.
 
 #figure(image("../results/figures/carte_sensibilite.png", width: 100%), caption: [La hausse de la perte attendue par seau de qualité et par échéance])
 
-Comment lire cette figure : une ligne par seau de qualité, l'échéance en abscisse. Les trois lignes du haut sont les trois meilleures qualités et elles montent avec l'échéance ; les deux du bas sont les deux pires et elles s'effondrent.
+Comment lire cette figure : une ligne par seau de qualité, l'échéance en abscisse. À un an la ligne du haut est le seau 4, et les trois meilleures qualités n'occupent les trois premières places qu'à partir de cinq ans. Les seaux 1 et 2 montent ensuite jusqu'à vingt ans, le seau 3 culmine à dix ans. Le seau 4 décline doucement à partir de cinq ans, et les seaux 5 et 6, les deux plus mauvaises qualités, s'effondrent dès la première année.
 
 #figure(image("../results/figures/mecanique_logit.png", width: 100%), caption: [Pourquoi : la majoration multiplie la cote et non la probabilité])
 
 Comment lire cette figure : en abscisse la probabilité de défaut avant majoration, en échelle logarithmique ; en ordonnée la hausse qu'elle subit, en pourcentage de sa valeur initiale. La ligne tiretée est le plafond #raw("exp(majoration) − 1"), soit 7,90 % pour la majoration de 2046, atteint quand la probabilité tend vers zéro. Les points marquent le milieu de chaque seau.
 
-*Ce que cela change en pratique.* Une institution qui lit son résultat d'exercice verra la hausse la plus forte sur la part la mieux notée et la plus longue de son livre, qui en est presque toujours la plus grosse. Ce n'est pas un signal sur le risque climatique de ces expositions, c'est une propriété de la fonction logit. Statut : *mesuré* sur la seule colonne de majorations publiée, celle du charbon canadien au seau 4, appliquée à tous les seaux ; c'est une hypothèse, déclarée, et c'est exactement ce qu'il faut pour isoler l'effet de la formule.
+Ce plafond de 7,90 % est plus bas que les 9,34 % du tableau ci-dessus, et deux différences les réconcilient. La figure ne porte que la majoration de 2046, la plus faible des vingt que le tableau emploie ; le chemin complet monte à 0,086 700 en 2050 puis se prolonge, et son plafond vaut 9,06 %. Seconde différence, la figure porte la seule probabilité de défaut quand le tableau porte la perte attendue, perte en cas de défaut comprise. Cette seconde différence ajoute 0,49 point au seau 1 à vingt ans, qui passe de 8,82 % à 9,31 %. Les six lignes du calcul sont dans #raw("results/reconciliation_plafond.csv").
+
+*Ce que cela change en pratique.* Une institution qui lit son résultat d'exercice verra la hausse la plus forte sur la part la mieux notée et la plus longue de son livre. Ce n'est pas un signal sur le risque climatique de ces expositions, c'est une propriété de la fonction logit. Statut : *mesuré* sur la seule colonne de majorations publiée, celle du charbon canadien au seau 4, appliquée à tous les seaux. C'est une hypothèse, déclarée, et c'est exactement ce qu'il faut pour isoler l'effet de la formule.
+
+Une seconde série de quatre hausses vit dans #raw("results/hausse_par_horizon.csv") : celle du même portefeuille stylisé, au seau 4 et sur six ans, aux quatre horizons de l'exercice. Elle vaut 5,28 %, 6,25 %, 7,40 % et 8,72 %, et ne se confond pas avec les 4,86 % à 8,05 % de la section 5.1, qui portent sur l'exposition de l'exemple du BSIF.
 
 === 5.3 Le rapport de 2022 : un maillon se refait, l'autre pas
 
@@ -270,17 +276,19 @@ Comment lire cette figure : en abscisse la probabilité de défaut avant majorat
     [],
 )
 
-Comment lire ce tableau, en trois constats. Le premier est que le résultat net ne figure pas dans le fichier : il se construit comme les produits moins les coûts directs d'émission moins les coûts indirects, et cette soustraction retrouve les deux valeurs publiées à un et deux points près. Le deuxième est que l'écart résiduel n'est pas expliqué et s'écrit comme tel : il peut venir d'un arrondi de publication, d'une pondération par l'exposition, ou d'une définition du résultat net légèrement différente. Statut : *non expliqué*. Le troisième est que le secteur de l'électricité, cité par le rapport, est absent de ce tableau parce que le fichier public ne porte pour lui ni produits ni coûts : statut *non trouvé*, et non zéro.
+Le tableau montre six des dix lignes calculables. Les dix sont dans #raw("results/secteurs_resultat_net.csv"), dont « Pétrole et gaz », que la figure plus bas écarte parce qu'il est la somme de « Pétrole » et de « Gaz », au dernier chiffre publié près.
+
+Comment lire ce tableau, en trois constats. Le premier est que le résultat net ne figure pas dans le fichier : il se construit comme les produits moins les coûts directs d'émission moins les coûts indirects. Cette soustraction retrouve les deux valeurs publiées à un et deux points près. Le deuxième est que l'écart résiduel n'est pas expliqué et s'écrit comme tel : il peut venir d'un arrondi de publication, d'une pondération par l'exposition, ou d'une définition du résultat net légèrement différente. Statut : *non expliqué*. Le troisième est que le secteur de l'électricité, cité par le rapport, est absent de ce tableau. Le fichier porte bien ses produits et ses coûts directs d'émission, 136,0 et 0,3 milliards de dollars US de 2014 en référence pour 2050, mais aucun coût indirect. C'est ce seul poste manquant qui l'écarte, et le statut de son résultat net est *non trouvé*, non zéro. Ce que le tableau n'établit pas : deux lignes sur six sont comparées à un chiffre publié, les quatre autres ne sont comparées à rien.
 
 #figure(image("../results/figures/secteurs_2050.png", width: 100%), caption: [Le résultat net par secteur en 2050, recalculé, avec les deux valeurs publiées])
 
-Comment lire cette figure : une barre par secteur, la variation contre le scénario de référence. Les deux losanges sont les seules valeurs que le rapport publie, et l'écart est écrit à côté de chacune.
+Comment lire cette figure : une barre par secteur, la variation contre le scénario de référence. Neuf barres et non dix, parce que « Pétrole et gaz » est la somme de « Pétrole » et de « Gaz », et que les trois côte à côte compteraient deux fois la même activité. Les deux losanges sont les seules valeurs que le rapport publie, et l'écart est écrit à côté de chacune.
 
 #figure(image("../results/figures/cascade_raffinage.png", width: 100%), caption: [La décomposition du résultat net du raffinage, avant et après])
 
-Comment lire cette figure : deux cascades, la même échelle. Elle montre d'où vient la baisse, et ce n'est pas d'où on l'attend. Les coûts directs d'émission ne montent que de *0,45 à 1,04 milliard*, et les coûts indirects *baissent* de 13,14 à 5,21 milliards. Ce qui s'effondre, ce sont les produits, de 98,4 à 30,8 milliards, soit *-68,7 %*. Le prix du carbone ne ruine pas le raffineur ; la disparition de sa demande le ruine.
+Comment lire cette figure : deux cascades, la même échelle. Elle montre d'où vient la baisse. Les coûts directs d'émission ne montent que de *0,45 à 1,04 milliard*, et les coûts indirects baissent de *13,14 à 5,21 milliards*. Ce qui s'effondre, ce sont les produits, de 98,4 à 30,8 milliards, soit *-68,7 %*. Le prix du carbone ne ruine pas le raffineur ; la disparition de sa demande le ruine. Les quatre postes sont dans #raw("results/cascade_raffinage.csv").
 
-*Ce qui ne se refait pas.* Le rapport dit page 30 que la hausse de probabilité de défaut vient d'évaluations d'emprunteurs faites par six institutions sur leurs propres dossiers, complétées par du jugement d'expert, puis résumées par un modèle de type Merton. Ces évaluations ne sont pas publiques. Le second maillon est donc *non reconstructible*, et le dépôt l'écrit plutôt que de fabriquer un chiffre qui y ressemblerait.
+*Ce qui ne se refait pas.* Le rapport dit page 30 que la hausse de probabilité de défaut vient d'évaluations d'emprunteurs faites par six institutions sur leurs propres dossiers. Ces évaluations sont complétées par du jugement d'expert, puis résumées par un modèle de type Merton, et elles ne sont pas publiques. Le second maillon est donc *non reconstructible*, et le dépôt l'écrit plutôt que de fabriquer un chiffre qui y ressemblerait.
 
 === 5.4 Ce qu'il faudrait supposer pour obtenir +450 %
 
@@ -299,46 +307,62 @@ Une question différente se pose au même chiffre, et celle-là se répond. Dans
     [*40 %*],
     [*50 %*],
     [1 an],
-    [9,63 %],
-    [9,82 %],
-    [10,00 %],
-    [10,17 %],
-    [10,53 %],
-    [10,89 %],
+    [*18,18 %*],
+    [*18,18 %*],
+    [18,18 %],
+    [18,17 %],
+    [17,92 %],
+    [17,04 %],
+    [2 ans],
+    [18,18 %],
+    [18,18 %],
+    [18,10 %],
+    [17,77 %],
+    [16,10 %],
+    [13,51 %],
     [3 ans],
-    [10,03 %],
-    [10,34 %],
-    [10,65 %],
-    [10,95 %],
-    [11,55 %],
+    [18,18 %],
+    [18,11 %],
+    [17,71 %],
+    [16,78 %],
+    [13,79 %],
     [10,31 %],
     [5 ans],
-    [10,30 %],
-    [10,70 %],
-    [11,09 %],
-    [11,48 %],
+    [18,13 %],
+    [17,59 %],
+    [16,21 %],
+    [14,22 %],
     [9,76 %],
     [5,93 %],
+    [7 ans],
+    [17,94 %],
+    [16,65 %],
+    [14,41 %],
+    [11,76 %],
+    [6,85 %],
+    [3,43 %],
     [10 ans],
-    [10,80 %],
-    [11,35 %],
+    [17,33 %],
+    [14,95 %],
     [11,83 %],
-    [8,74 %],
+    [*8,74 %*],
     [4,04 %],
     [1,54 %],
 )
 
-Comment lire ce tableau, en trois constats. Chaque case est la probabilité de défaut que l'emprunteur devrait avoir *avant* le choc. Le premier constat est que dans la plage de volatilité d'actif ordinaire d'une entreprise cotée, de 15 % à 30 %, la réponse tient entre *8,74 % et 11,83 %* quel que soit l'horizon : il faut un emprunteur qui défaille déjà environ une fois sur dix, donc de qualité spéculative, et non un emprunteur de première catégorie. Le deuxième est que hors de cette plage, à 40 % et 50 % de volatilité sur des horizons longs, la réponse s'effondre jusqu'à 1,54 %, et le dire fait partie du résultat. Le troisième est que ce calcul *n'est pas* celui de la Banque du Canada : c'est une question posée à son chiffre, sous une hypothèse déclarée, celle que la valeur d'actif suit le résultat net.
+Comment lire ce tableau, en trois constats. Chaque case est la probabilité de défaut que l'emprunteur devrait avoir *avant* le choc, cumulée jusqu'à l'horizon de sa ligne et non annuelle. Les 17,33 % de la case à dix ans et 15 % de volatilité valent 1,89 % par an. Le premier constat est que dans la plage de volatilité d'actif ordinaire d'une entreprise cotée, de 15 % à 30 %, la réponse tient entre *8,74 % et 18,18 %*. Il faut donc un emprunteur qui défaille déjà entre une fois sur cinq et demi et une fois sur onze et demi, de qualité spéculative, et non un emprunteur de première catégorie. Le deuxième est que le haut du tableau ne bouge plus. Dès que le choc suffit à rendre le défaut presque certain, le rapport de 5,5 ne peut être atteint que si la probabilité de départ vaut *1 / 5,5 = 18,18 %*. Ce plafond est un fait d'arithmétique et non un résultat du modèle. Le troisième est que ce calcul n'est pas celui de la Banque du Canada : c'est une question posée à son chiffre, sous une hypothèse déclarée, celle que la valeur d'actif suit le résultat net. Statut : *modélisé*.
+
+Ce plafond se démontre en une ligne. Une probabilité ne peut pas dépasser un, donc le rapport de la probabilité d'après à celle d'avant ne peut pas dépasser l'inverse de celle d'avant. Exiger un rapport de 5,5 impose donc une probabilité de départ d'au moins un sur cinq et demi, soit 18,18 %. Le module le retrouve à la sixième décimale : à un an et 15 % de volatilité, il rend une probabilité de départ de 18,182 % pour une probabilité d'arrivée de 1,000000.
 
 #figure(image("../results/figures/inversion_merton.png", width: 100%), caption: [Le levier et la probabilité de défaut de départ qu'il faudrait])
 
-Comment lire cette figure : le levier requis à gauche, la probabilité de défaut de départ à droite, et la bande grisée est la plage usuelle de volatilité d'actif.
+Comment lire cette figure : le levier requis à gauche, la probabilité de défaut de départ à droite, et la bande grisée est la plage usuelle de volatilité d'actif. Les deux courbes sont tracées à l'horizon de cinq ans seulement, une seule ligne du tableau ci-dessus. La courbe de droite s'aplatit à gauche parce qu'elle bute sur le plafond de 18,18 %, et non parce que le modèle s'y stabilise. Son titre arrondit la borne haute de la bande, 18,1 % à cinq ans, à une fois sur six.
 
 == 6. Reproduire
 
-#raw("uv sync --locked --all-extras\nuv run pytest                 # 33 tests fermés, sans réseau, moins d'une seconde\nuv run scc fetch              # les quatre fichiers publics, environ 11 Mo\nuv run scc verifier           # les constantes du dépôt contre le classeur du BSIF\nuv run scc tout               # les quatre calculs et les six figures", block: true, lang: "bash")
+#raw("uv sync --locked --all-extras\nuv run pytest                 # 37 tests, dont 36 fermés et sans réseau, moins d'une seconde\nuv run scc fetch              # les quatre fichiers publics, environ 11 Mo\nuv run scc verifier           # les constantes du dépôt contre le classeur du BSIF\nuv run scc tout               # les quatre calculs et les six figures", block: true, lang: "bash")
 
-Les tests ne touchent jamais le réseau : la vérité connue vit dans #raw("src/scc/exemple.py"), et #raw("scc verifier") est la commande qui prouve que cette vérité est bien celle du régulateur. Tous les chiffres de ce README viennent des fichiers de #raw("results/").
+La vérité connue vit dans #raw("src/scc/exemple.py"), et #raw("scc verifier") est la commande qui prouve que cette vérité est bien celle du régulateur. Un seul test lit #raw("data/raw"), celui qui rattache la baisse de valeur de 71,1 % du modèle de Merton à sa mesure ; il est sauté quand le fichier manque. Les chiffres de ce README viennent des fichiers de #raw("results/"), sauf ceux que voici. Les chiffres de la section 3 et les deux valeurs de l'électricité de la section 5.3 se lisent dans #raw("data/raw/"). Ceux de la section 4 et les vingt et une majorations sont les constantes de #raw("src/scc/exemple.py"), que #raw("scc verifier") confronte au classeur du BSIF. L'écart de 1,2e-15 sur les pertes en cas de défaut de 2045 se mesure de la même façon. Les dix contrôles se comptent dans #raw("src/scc/cli.py"), et les 37 tests dans la sortie de #raw("pytest"). Les quatre chiffres de sensibilité au plancher, au tableau des limites, s'obtiennent en faisant varier la constante #raw("PLANCHER") de #raw("src/scc/sensibilite.py").
 
 == 7. Limites, avec leur statut
 
@@ -359,8 +383,12 @@ Les tests ne touchent jamais le réseau : la vérité connue vit dans #raw("src/
     [non reconstructible ; les évaluations d'emprunteurs des six institutions ne sont pas publiques],
     [L'inversion de Merton suppose que la valeur d'actif suit proportionnellement le résultat net],
     [hypothèse déclarée ; elle répond à une autre question que celle du rapport, et le dépôt ne prétend pas le contraire],
-    [Le secteur de l'électricité n'a ni produits ni coûts dans le fichier public],
-    [non trouvé ; il est absent du tableau plutôt que compté zéro],
+    [Le secteur de l'électricité n'a aucun coût indirect dans le fichier public, alors qu'il en a les produits et les coûts directs d'émission],
+    [non trouvé ; son résultat net ne se calcule pas, et il est absent du tableau plutôt que compté zéro],
+    [Le premier seau part de zéro, dont le milieu géométrique n'existe pas : la carte de sensibilité lui impose un plancher de 1 point de base, d'où sa probabilité de 0,03 %],
+    [hypothèse déclarée ; mesuré en faisant varier ce plancher de 1e-3 à 1e-6, la hausse du seau 1 à vingt ans va de 9,342 % à 9,221 % et le rapport entre extrêmes de 5,902 à 5,825, contre 5,882 publié],
+    [« Pétrole et gaz » est la somme de « Pétrole » et de « Gaz » dans le fichier de la Banque du Canada, au dernier chiffre publié près],
+    [mesuré ; la ligne reste dans #raw("results/secteurs_resultat_net.csv") avec sa marque #raw("agregat"), et la figure des secteurs l'écarte],
     [Seuls les modules de crédit sont codés, pas ceux de marché, d'immobilier, d'inondation ni de feux de forêt],
     [déclaré ; les quatre autres exemples travaillés du classeur restent ouverts],
     [Le portefeuille stylisé prend un hasard de défaut constant, une perte en cas de défaut de 45 % et un taux de 5 %],

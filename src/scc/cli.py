@@ -36,7 +36,10 @@ def fetch():
 def verifier():
     """Comparer les constantes de `exemple.py` au classeur du BSIF téléchargé.
 
-    Prouve que la vérité connue du dépôt est bien celle du régulateur, et non une transcription.
+    Prouve que la vérité connue du dépôt est bien celle du régulateur, et non une transcription. Les
+    dix contrôles couvrent les huit nombres du tableau de la section 5.1 du README, plus les
+    probabilités, les pertes en cas de défaut, les expositions et les 21 majorations qui les
+    produisent.
     """
     lu = ex.lire_exemple(donnees.chemin("scse_instructions.xlsx"))
     controles = [
@@ -45,6 +48,8 @@ def verifier():
              for n in ex.SCENARIOS)),
         ("perte en cas de défaut", float(np.abs(lu["lgd"] - ex.LGD).max())),
         ("exposition", float(np.abs(lu["ead"] - ex.EAD).max())),
+        ("perte attendue de référence, trois scénarios",
+         max(abs(lu["ecl_reference"][n] - ex.ECL_REFERENCE[n]) for n in ex.SCENARIOS)),
         ("perte attendue de référence, pondérée",
          abs(lu["ecl_reference_ponderee"] - ex.ECL_REFERENCE_PONDEREE)),
         ("probabilités climatiques 2045",
@@ -55,6 +60,8 @@ def verifier():
                       - ex.LGD_CLIMATIQUES_2045_PESSIMISTE).max())),
         ("perte attendue climatique 2045, trois scénarios",
          max(abs(lu["ecl_climatique_2045"][n] - ex.ECL_CLIMATIQUE_2045[n]) for n in ex.SCENARIOS)),
+        ("pertes attendues climatiques, quatre horizons",
+         max(abs(lu["ecl_par_horizon"][h] - ex.ECL_PAR_HORIZON[h]) for h in ex.HORIZONS)),
         ("majorations, 21 années",
          max(abs(lu["majorations"][a] - ex.MAJORATIONS[a]) for a in ex.MAJORATIONS)),
     ]
@@ -93,11 +100,18 @@ def module():
 @app.command()
 def sensibilite(horizon: int = 2045):
     """La carte de la hausse de perte attendue, par seau de qualité et par échéance."""
-    from .sensibilite import carte, par_horizon
+    from .sensibilite import carte, par_horizon, reconciliation
 
     table = carte(horizon)
     _ecrire(table, "carte_sensibilite.csv")
-    _ecrire(par_horizon(), "hausse_par_horizon.csv")
+    # le nom de colonne dit l'objet : ces quatre hausses portent sur le portefeuille stylisé au
+    # seau 4 sur six ans, et non sur l'exposition de l'exemple du BSIF, dont les quatre hausses
+    # vivent dans exemple_bsif.csv et valent autre chose
+    _ecrire(par_horizon().rename(columns={"hausse_pct": "hausse_pct_portefeuille_stylise_seau4_6ans"}),
+            "hausse_par_horizon.csv")
+    # les deux plafonds et la contribution de la perte en cas de défaut : sans eux, le lecteur voit
+    # un plafond de 7,90 % sous une figure et des hausses de 9,34 % dans le tableau voisin
+    _ecrire(reconciliation(horizon), "reconciliation_plafond.csv")
     colonne = table.columns[-1]
     typer.echo(f"à {colonne}, seau 1 monte de {table[colonne].iloc[0]:.2f} % et seau 6 de "
                f"{table[colonne].iloc[-1]:.2f} %, soit un rapport de "
@@ -148,7 +162,12 @@ def figures():
     from .sensibilite import carte
 
     typer.echo(f"exemple  : {fig.fig_exemple()}")
-    typer.echo(f"mécanique: {fig.fig_mecanique()}")
+    mecanique = fig.fig_mecanique()
+    typer.echo(f"mécanique: {mecanique}")
+    # le plafond de la mécanique et les six postes de la cascade sont des chiffres du README : ils
+    # sont écrits dans results/ comme les autres, faute de quoi ils ne vivraient que dans un PNG
+    _ecrire(pd.DataFrame({"hausse_pct": mecanique["par_seau"]}).rename_axis("seau").assign(
+        plafond_pct=mecanique["plafond_pct"]), "mecanique_logit.csv")
     typer.echo(f"carte    : {fig.fig_carte(carte())}")
     typer.echo(f"merton   : {fig.fig_merton()}")
 
@@ -162,6 +181,17 @@ def figures():
             net.loc[("Refined oil products", "Below 2°C immediate")],
     }
     typer.echo(f"cascade  : {fig.fig_cascade(raffinage)}")
+    # les valeurs du fichier sont en dizaines de milliards de dollars US de 2014 : x 10 les met en
+    # milliards, seule unité dans laquelle un lecteur reconnaît un ordre de grandeur
+    postes = pd.DataFrame({
+        titre: {"produits": 10 * ligne["Revenue"],
+                "couts_directs_emission": 10 * ligne["Direct emissions costs"],
+                "couts_indirects": 10 * ligne["Indirect costs"],
+                "resultat_net": 10 * (ligne["Revenue"] - ligne["Direct emissions costs"]
+                                      - ligne["Indirect costs"])}
+        for titre, ligne in raffinage.items()})
+    postes["variation_pct"] = 100.0 * (postes.iloc[:, 1] / postes.iloc[:, 0] - 1.0)
+    _ecrire(postes.rename_axis("poste_milliards_usd_2014"), "cascade_raffinage.csv")
 
 
 @app.command()

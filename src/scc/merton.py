@@ -1,14 +1,14 @@
 """Le maillon manquant, retourné : quel emprunteur faudrait-il pour que +450 % de PD en découle ?
 
 Le rapport de 2022 ne permet pas de reconstruire sa hausse de probabilité de défaut, faute des
-évaluations d'emprunteurs qui la calibrent. Il reste une question qui, elle, se répond : dans le
+évaluations d'emprunteurs qui la calibrent. Il reste une question qui, elle, se répond. Dans le
 modèle de structure le plus simple, celui de Merton, quel niveau d'endettement un emprunteur devrait
 avoir pour qu'une baisse de valeur de 71 % multiplie sa probabilité de défaut par 5,5 ?
 
 Le **modèle de Merton** traite les capitaux propres d'une entreprise comme une option d'achat sur ses
 actifs : l'actionnaire ne rembourse la dette que si les actifs valent plus qu'elle, et fait défaut
 sinon. La probabilité de défaut est donc celle que la valeur des actifs tombe sous la dette à
-l'échéance, et elle ne dépend que de trois choses, le rapport de la dette à l'actif, la volatilité de
+l'échéance. Elle ne dépend que de trois choses, le rapport de la dette à l'actif, la volatilité de
 l'actif et l'horizon.
 
 Ce que ce module calcule N'EST PAS ce que la Banque du Canada a fait, et le README le dit. C'est une
@@ -22,8 +22,11 @@ import numpy as np
 from scipy.optimize import brentq
 from scipy.stats import norm
 
-# La baisse de valeur retenue par défaut est celle que le fichier public donne pour les produits
-# pétroliers raffinés en 2050, sous « sous 2 °C immédiat », mesurée par le module `scenarios`.
+# La baisse de valeur retenue par défaut est un ARRONDI de celle que le fichier public donne pour
+# les produits pétroliers raffinés en 2050, sous « sous 2 °C immédiat ». Le module `scenarios` la
+# mesure à -71,063 709 % ; la constante en garde trois décimales pour que l'hypothèse reste lisible.
+# Le test `test_le_choc_par_defaut_est_l_arrondi_de_la_valeur_mesuree` compare les deux, si bien
+# qu'une révision du fichier de la Banque du Canada ferait tomber le test au lieu de passer inaperçue.
 CHOC_RAFFINAGE = 0.711
 RATIO_PUBLIE = 5.5          # +450 % de probabilité de défaut, donc 5,5 fois
 
@@ -64,7 +67,12 @@ def ratio_apres_choc(levier: float, choc: float, volatilite: float, horizon: flo
     if not 0.0 < levier < 1.0 or not 0.0 <= choc < 1.0:
         raise ValueError("levier dans (0, 1) et choc dans [0, 1)")
     avant = _log_probabilite(levier, volatilite, horizon, derive)
-    apres = _log_probabilite(min(levier / (1.0 - choc), 1.0 - 1e-12), volatilite, horizon, derive)
+    # le levier après choc n'est PAS plafonné à un. Une entreprise dont la dette dépasse la valeur
+    # d'actif restante est économiquement insolvable, et le modèle sait le dire : sa probabilité de
+    # défaut monte au-dessus d'une chance sur deux sans jamais atteindre un, l'actif pouvant encore
+    # remonter avant l'échéance. Le plafonner reviendrait à traiter l'insolvable comme le tout juste
+    # solvable, ce qui sous-estime la probabilité après choc, donc le rapport qu'on cherche.
+    apres = _log_probabilite(levier / (1.0 - choc), volatilite, horizon, derive)
     # un emprunteur sans dette a une probabilité si petite que le rapport déborde le flottant : le
     # dire plutôt que de laisser numpy prévenir et rendre l'infini
     return float("inf") if apres - avant > 700.0 else float(np.exp(apres - avant))

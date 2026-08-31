@@ -1,9 +1,9 @@
 """Les quatre fichiers publics du dépôt, téléchargés par script et jamais commités.
 
 Trois viennent du BSIF et de la Banque du Canada, le quatrième est le rapport de 2022 qui porte les
-chiffres à retrouver. Aucun n'est redistribué ici : les conditions des deux organismes autorisent
-l'usage et la copie avec attribution, mais la convention du portefeuille est de ne rien commiter, ce
-qui évite d'avoir à trancher la question à chaque fichier.
+chiffres à retrouver. Aucun n'est redistribué ici. Les conditions des deux organismes autorisent
+l'usage et la copie avec attribution, mais la convention du portefeuille est de ne rien commiter.
+Cette convention évite d'avoir à trancher la question à chaque fichier.
 
 Une adresse a été corrigée le 2026-08-30. Le rapport n'est pas sous `/uploads/2022/01/`, chemin qui
 répond 404, mais sous `/uploads/2021/11/`, alors même que le rapport porte la date de janvier 2022.
@@ -62,8 +62,8 @@ FICHIERS = [
 def _contexte() -> ssl.SSLContext:
     """Le contexte TLS, adossé au magasin de certificats du système quand c'est possible.
 
-    Sur macOS, la bibliothèque standard de Python ne lit pas le trousseau du système : les serveurs
-    du BSIF et de la Banque du Canada répondent alors « unable to get local issuer certificate »
+    Sur macOS, la bibliothèque standard de Python ne lit pas le trousseau du système. Les serveurs
+    du BSIF et de la Banque du Canada répondent alors « unable to get local issuer certificate »,
     alors que `curl` passe sur la même machine. `truststore` branche le magasin du système, ce qui
     règle le cas sans désactiver aucune vérification.
     """

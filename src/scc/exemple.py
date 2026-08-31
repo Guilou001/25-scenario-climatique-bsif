@@ -102,12 +102,41 @@ def exposition():
                       taux_actualisation=TAUX_ACTUALISATION)
 
 
+class ClasseurInattendu(LookupError):
+    """Le classeur ne porte pas un libellé attendu. Mieux vaut s'arrêter que lire à côté."""
+
+
+def _ligne_du_libelle(lignes, libelle: str, colonne: int = 0) -> int:
+    """Le rang de la première ligne dont la colonne donnée porte exactement ce libellé.
+
+    Compter les lignes en dur casserait en silence : le BSIF publie déjà ce classeur sous le suffixe
+    `_2`, donc il le révise, et deux lignes insérées feraient lire les cellules voisines sans lever
+    d'erreur. Le libellé, lui, se déplace avec son bloc.
+    """
+    for i, ligne in enumerate(lignes):
+        valeur = ligne[colonne] if colonne < len(ligne) else None
+        if isinstance(valeur, str) and valeur.strip() == libelle:
+            return i
+    raise ClasseurInattendu(f"libellé « {libelle} » introuvable en colonne {colonne + 1}")
+
+
+def _premiere_annee(lignes, depart: int) -> int:
+    """Le rang de la première ligne, à partir de `depart`, dont la colonne A porte une année."""
+    for i in range(depart, len(lignes)):
+        valeur = lignes[i][0]
+        if isinstance(valeur, int) and not isinstance(valeur, bool) and 1900 < valeur < 2200:
+            return i
+    raise ClasseurInattendu(f"aucune année en colonne A après la ligne {depart + 1}")
+
+
 def lire_exemple(classeur) -> dict:
     """Les mêmes nombres, ré-extraits du classeur d'instructions téléchargé.
 
     Sert à prouver que les constantes de ce fichier sont bien celles du BSIF et non une transcription
     approximative. Exige le fichier, donc le réseau au moins une fois : les tests, eux, tournent sur
     les constantes.
+
+    Chaque bloc est ancré sur un libellé du classeur, jamais sur un numéro de ligne.
     """
     import openpyxl
 
@@ -118,19 +147,37 @@ def lire_exemple(classeur) -> dict:
         return np.array([[lignes[depart + i][c] for c in colonnes] for i in range(hauteur)],
                         dtype=float)
 
-    pd_ref = bloc(15, range(1, 4))                       # lignes 16 à 21, colonnes B à D
-    majorations = {int(lignes[83 + i][0]): float(lignes[83 + i][4]) for i in range(21)}
+    # le bloc de référence suit le libellé « Years in the Lifetime of the exposure », qui apparaît
+    # deux fois dans l'onglet : la première occurrence est bien celle d'avant climat
+    reference = _premiere_annee(
+        lignes, _ligne_du_libelle(lignes, "Years in the Lifetime of the exposure"))
+    # la probabilité INCONDITIONNELLE est en colonne B et la perte en cas de défaut en colonne E. Le
+    # bloc des probabilités conditionnelles porte, lui, la CONDITIONNELLE en colonne E, et les
+    # confondre décale les six valeurs de trois millièmes.
+    climatique = _premiere_annee(
+        lignes, _ligne_du_libelle(lignes, "Years in the Lifetime for the snapshot"))
+    total_reference = _ligne_du_libelle(lignes, "Total ECL", colonne=6)
+    total_climatique = _ligne_du_libelle(lignes, "Total ECL", colonne=3)
+    majorations_debut = _premiere_annee(lignes, _ligne_du_libelle(lignes, "year"))
+    # la ligne que l'institution reporterait : elle suit l'en-tête du bloc « SCSE Workbook », et
+    # c'est la seule dont la colonne A nomme un secteur
+    entete_releve = _ligne_du_libelle(lignes, "industry_sector")
+    releve = _ligne_du_libelle(lignes[entete_releve:], "COAL") + entete_releve
+
+    pd_ref = bloc(reference, range(1, 4))
+    majorations = {int(lignes[majorations_debut + i][0]): float(lignes[majorations_debut + i][4])
+                   for i in range(21)}
     return {
         "pd_inconditionnelles": {nom: pd_ref[:, j] for j, nom in enumerate(SCENARIOS)},
-        "lgd": bloc(15, range(4, 5)).ravel(),
-        "ead": bloc(15, range(5, 6)).ravel(),
-        "ecl_reference": {nom: float(lignes[22][11 + j]) for j, nom in enumerate(SCENARIOS)},
-        "ecl_reference_ponderee": float(lignes[22][14]),
-        # lignes 63 à 68 : la probabilité INCONDITIONNELLE est en colonne B et la perte en cas de
-        # défaut en colonne E. Le bloc des lignes 51 à 56 porte, lui, la CONDITIONNELLE en colonne E,
-        # et les confondre décale les six valeurs de trois millièmes.
-        "pd_climatiques_2045_pessimiste": bloc(62, range(1, 2)).ravel(),
-        "lgd_climatiques_2045_pessimiste": bloc(62, range(4, 5)).ravel(),
-        "ecl_climatique_2045": {nom: float(lignes[69][8 + j]) for j, nom in enumerate(SCENARIOS)},
+        "lgd": bloc(reference, range(4, 5)).ravel(),
+        "ead": bloc(reference, range(5, 6)).ravel(),
+        "ecl_reference": {nom: float(lignes[total_reference][11 + j])
+                          for j, nom in enumerate(SCENARIOS)},
+        "ecl_reference_ponderee": float(lignes[total_reference][14]),
+        "pd_climatiques_2045_pessimiste": bloc(climatique, range(1, 2)).ravel(),
+        "lgd_climatiques_2045_pessimiste": bloc(climatique, range(4, 5)).ravel(),
+        "ecl_climatique_2045": {nom: float(lignes[total_climatique][8 + j])
+                                for j, nom in enumerate(SCENARIOS)},
+        "ecl_par_horizon": {h: float(lignes[releve][6 + j]) for j, h in enumerate(HORIZONS)},
         "majorations": majorations,
     }

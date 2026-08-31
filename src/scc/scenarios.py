@@ -3,14 +3,14 @@
 En 2022 la Banque du Canada et le BSIF ont publié le rapport d'un projet pilote mené avec six
 institutions financières, et le fichier de trajectoires qui le nourrit. Le rapport annonce, page 32,
 que le secteur des produits pétroliers raffinés voit sa probabilité de défaut monter de 450 % d'ici
-2050 pour une baisse de 72 % de son résultat net, et le secteur des cultures de 141 % pour une baisse
-de 32 %.
+2050, pour une baisse de 72 % de son résultat net. Il annonce pour le secteur des cultures 141 %,
+pour une baisse de 32 %.
 
 Ce module refait le premier maillon, celui du résultat net, qui se déduit entièrement du fichier
-public. Il ne refait pas le second, et c'est important : le rapport dit page 30 que les points de
+public. Il ne refait pas le second, et c'est important. Le rapport dit page 30 que les points de
 calibration viennent d'évaluations d'emprunteurs faites par les six institutions sur leurs propres
-dossiers, puis ajustées à dire d'expert, avant d'être résumées par un modèle de type Merton. Ces
-évaluations ne sont pas publiques. Le second maillon est donc **non reconstructible**, et le dépôt
+dossiers. Ces évaluations sont ensuite ajustées à dire d'expert, puis résumées par un modèle de type
+Merton, et elles ne sont pas publiques. Le second maillon est donc **non reconstructible**, et le dépôt
 l'écrit plutôt que de fabriquer un chiffre qui y ressemblerait.
 """
 
@@ -27,6 +27,14 @@ RAPPORT = ("https://www.bankofcanada.ca/wp-content/uploads/2021/11/"
 
 REFERENCE = "Baseline (2019 policies)"
 POSTES = ("Revenue", "Direct emissions costs", "Indirect costs")
+
+# « Oil & Gas » n'est pas un secteur de plus, c'est la somme de « Oil » et de « Gas », poste par
+# poste et au dernier chiffre publié près : au Canada en 2050 sous le scénario de référence, les
+# deux postes de coûts s'additionnent exactement, et les produits à 0,0001 près, 20,1922 plus
+# 6,7274 contre 26,9195 publiés pour le cumul. Une figure qui l'aligne à côté de ses deux
+# composantes compte donc deux fois la même activité. Il reste dans la table, avec sa marque, et la
+# figure l'écarte.
+AGREGATS = ("Oil & Gas",)
 
 # Ce que le rapport annonce, page 32, pour le Canada en 2050 sous « Below 2°C immediate ».
 PUBLIES = {
@@ -63,7 +71,7 @@ def resultat_net(table: pd.DataFrame, geographie: str = "Canada", annee: int = 2
     """Le résultat net par secteur et par scénario : produits, moins les deux postes de coûts.
 
     Le rapport ne publie pas de ligne « résultat net ». Il publie les produits, les coûts directs
-    d'émission et les coûts indirects, tous trois en dizaines de milliards de dollars de 2014, et la
+    d'émission et les coûts indirects, tous trois en dizaines de milliards de dollars de 2014. La
     soustraction est celle que le rapport décrit au chapitre du risque de crédit.
     """
     bloc = table[table.CL_GEOGRAPHY.eq(geographie) & table.CL_YEAR.eq(annee)
@@ -81,7 +89,9 @@ def variation(table: pd.DataFrame, geographie: str = "Canada", annee: int = 2050
               scenario: str = "Below 2°C immediate") -> pd.DataFrame:
     """La variation du résultat net contre le scénario de référence, en pourcentage.
 
-    C'est l'axe horizontal du graphique 16 du rapport, celui que le dépôt cherche à retrouver.
+    C'est l'axe horizontal du graphique 16 du rapport, celui que le dépôt cherche à retrouver. La
+    colonne `agregat` marque les lignes qui recouvrent d'autres lignes de la même table, pour qu'un
+    lecteur qui somme ou qui pondère ne compte pas deux fois la même activité.
     """
     net = resultat_net(table, geographie, annee)["resultat_net"].unstack("CL_SCENARIO")
     if scenario not in net.columns or REFERENCE not in net.columns:
@@ -94,6 +104,7 @@ def variation(table: pd.DataFrame, geographie: str = "Canada", annee: int = 2050
     lignes["variation_pct"] = 100.0 * (lignes["scenario"] / lignes["reference"] - 1.0)
     lignes["publie_pct"] = [PUBLIES.get(s, {}).get("resultat_net_pct") for s in net.index]
     lignes["ecart_points"] = lignes["variation_pct"] - lignes["publie_pct"]
+    lignes["agregat"] = [s in AGREGATS for s in net.index]
     return lignes.sort_values("variation_pct")
 
 
