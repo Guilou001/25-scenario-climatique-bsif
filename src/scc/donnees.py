@@ -54,7 +54,8 @@ FICHIERS = [
     Fichier("rapport_pilote.pdf",
             "https://www.bankofcanada.ca/wp-content/uploads/2021/11/"
             "BoC-OSFI-Using-Scenario-Analysis-to-Assess-Climate-Transition-Risk.pdf",
-            "le rapport du projet pilote de 2022, 62 pages, dont le graphique 16 page 32",
+            "le rapport du projet pilote de 2022, 62 pages, dont le graphique 16 en page 32 du "
+            "PDF, folio imprimé 31",
             "Banque du Canada et BSIF, usage permis avec attribution"),
 ]
 

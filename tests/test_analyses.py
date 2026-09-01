@@ -145,8 +145,8 @@ def test_le_resultat_net_est_les_produits_moins_les_deux_postes_de_couts(tmp_pat
     soit une baisse de 57,142857 %."""
     resultats = variation(charger(_fichier_bdc(tmp_path / "mini.csv")))
     ligne = resultats.iloc[0]
-    assert ligne["reference"] == pytest.approx(70.0)
-    assert ligne["scenario"] == pytest.approx(30.0)
+    assert ligne["reference_10_milliards_usd_2014"] == pytest.approx(70.0)
+    assert ligne["scenario_10_milliards_usd_2014"] == pytest.approx(30.0)
     assert ligne["variation_pct"] == pytest.approx(100 * (30 / 70 - 1))
     assert ligne["publie_pct"] == PUBLIES["Refined oil products"]["resultat_net_pct"]
 

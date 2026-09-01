@@ -26,8 +26,8 @@ def fig_exemple(dest: Path = DEST) -> dict:
     """La perte attendue de l'exemple officiel, calculée contre publiée, aux quatre horizons.
 
     C'est la figure de la vérification : si une barre calculée s'écartait de son point publié, elle
-    se verrait. Aucune ne s'en écarte, et l'écart maximal est écrit en clair pour que l'absence
-    d'écart visible ne passe pas pour une figure vide.
+    se verrait. Aucune ne s'en écarte, et c'est le titre qui porte l'écart, sous la forme du seuil
+    décimal qui le borne, pour que l'absence d'écart visible ne passe pas pour une figure vide.
     """
     appliquer()
     exposition = ex.exposition()
@@ -60,8 +60,14 @@ def fig_exemple(dest: Path = DEST) -> dict:
     ax.set_ylim(reference - 0.14 * (max(calcules) - reference),
                 reference + 1.35 * (max(calcules) - reference))
     ax.legend(loc="upper left")
-    ax.set_title("Les quatre pertes attendues de l'exemple du BSIF, retrouvées à moins "
-                 "d'un milliardième de dollar près")
+    # le seuil du titre se déduit de l'écart mesuré plutôt que d'être écrit en dur : si l'écart
+    # grandissait un jour, le titre le dirait au lieu de continuer à promettre le milliardième
+    seuils = ((1e-12, "billionième"), (1e-9, "milliardième"), (1e-6, "millionième"),
+              (1e-3, "millième"))
+    nom_du_seuil = next((nom for seuil, nom in seuils if ecart < seuil), None)
+    accord = (f"retrouvées à moins d'un {nom_du_seuil} de dollar près" if nom_du_seuil
+              else f"écartées de {fr(ecart, 6)} dollar au plus")
+    ax.set_title(f"Les quatre pertes attendues de l'exemple du BSIF, {accord}")
     enregistrer(fig, dest, "exemple_bsif")
     plt.close(fig)
     return {"ecart_max_dollars": ecart, "reference": reference,
@@ -152,7 +158,8 @@ def fig_secteurs(variations, dest: Path = DEST) -> dict:
     ax.barh(positions, variations["variation_pct"], color=couleurs, height=0.62)
     connus = variations["publie_pct"].notna()
     ax.scatter(variations.loc[connus, "publie_pct"], positions[connus.to_numpy()], s=80,
-               marker="D", color=OKABE_ITO[0], zorder=5, label="publié page 32 du rapport")
+               marker="D", color=OKABE_ITO[0], zorder=5,
+               label="publié page 32 du PDF du rapport (folio 31)")
     for i, (_, ligne) in enumerate(variations.iterrows()):
         if np.isfinite(ligne["publie_pct"]):
             # à gauche du plus à gauche des deux repères, sinon le texte passe sur le losange
@@ -191,6 +198,11 @@ def fig_cascade(net, dest: Path = DEST) -> dict:
             ax, ["Coûts directs d'émission", "Coûts indirects"],
             [-10 * ligne["Direct emissions costs"], -10 * ligne["Indirect costs"]],
             depart=10 * ligne["Revenue"], total="Résultat net", decimales=2)
+        # sans cette étiquette, les produits ne se lisent nulle part : la cascade en part, mais
+        # aucune barre ne les porte, et le mode d'emploi de la figure les commente pourtant
+        ax.annotate(f"produits : {fr(cumuls[titre][0], 2)}", (0, cumuls[titre][0]),
+                    xytext=(0, 13), textcoords="offset points", ha="center", va="bottom",
+                    fontsize=8.5, color=GRIS)
         ax.set_title(titre)
         ax.yaxis.set_major_formatter(formateur(0))
 
@@ -231,7 +243,10 @@ def fig_merton(dest: Path = DEST) -> dict:
 
     # la bande des volatilités d'actif ordinaires d'une entreprise cotée : hors d'elle, à 40 % et
     # plus, la réponse s'effondre, et le dire fait partie du résultat
-    usuelle = (volatilites >= 0.15) & (volatilites <= 0.30)
+    # la comparaison est tolérante : la grille est construite par `linspace`, dont la volatilité de
+    # 30 % vaut 0,300 000 000 000 000 04, et un test strict l'exclurait de la bande que `axvspan`
+    # dessine pourtant jusqu'à 30
+    usuelle = (volatilites >= 0.15 - 1e-9) & (volatilites <= 0.30 + 1e-9)
     ax.axvspan(15, 30, color=GRIS, alpha=0.08, linewidth=0)
     bas, haut = 100 * depart[usuelle].min(), 100 * depart[usuelle].max()
     second.annotate(f"plage usuelle de volatilité d'actif :\nprobabilité de départ de "
@@ -242,10 +257,12 @@ def fig_merton(dest: Path = DEST) -> dict:
     ax.legend(lignes, [ligne.get_label() for ligne in lignes], loc="lower left")
     fini = np.isfinite(depart)
     # le titre se déduit des données plutôt que d'être écrit à la main : une version figée annonçait
-    # « une fois sur dix » et a survécu à une correction qui portait la plage à une fois sur six
-    sur = round(1.0 / (haut / 100.0))
+    # « une fois sur dix » et a survécu à une correction qui déplaçait la plage. L'arrondi est au
+    # demi et non à l'entier : à l'entier, 5,51 devient 6, et le titre fait paraître l'emprunteur
+    # moins fragile que le corps du texte ne le dit
+    sur = round(2.0 / (haut / 100.0)) / 2.0
     ax.set_title("Pour que la probabilité de défaut quintuple, il faut un emprunteur qui défaille "
-                 f"déjà une fois sur {sur}")
+                 f"déjà une fois sur {fr(sur, 1)}")
     enregistrer(fig, dest, "inversion_merton")
     plt.close(fig)
     return {"pd_depart_min_pct": float(100 * np.nanmin(depart[fini])),

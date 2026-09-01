@@ -1,4 +1,4 @@
-secteur,reference,scenario,variation_pct,publie_pct,ecart_points,agregat
+secteur,reference_10_milliards_usd_2014,scenario_10_milliards_usd_2014,variation_pct,publie_pct,ecart_points,agregat
 Charbon,0.4614,0.0695,-84.93714781100996,,,False
 Pétrole,14.5108,2.9621999999999993,-79.58623921492958,,,False
 Pétrole et gaz,19.5839,4.4605,-77.22363778409816,,,True

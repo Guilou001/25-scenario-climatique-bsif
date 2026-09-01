@@ -1,17 +1,17 @@
 """Le fichier de scénarios de la Banque du Canada, et le seul maillon qu'il permet de refaire.
 
 En 2022 la Banque du Canada et le BSIF ont publié le rapport d'un projet pilote mené avec six
-institutions financières, et le fichier de trajectoires qui le nourrit. Le rapport annonce, page 32,
-que le secteur des produits pétroliers raffinés voit sa probabilité de défaut monter de 450 % d'ici
-2050, pour une baisse de 72 % de son résultat net. Il annonce pour le secteur des cultures 141 %,
-pour une baisse de 32 %.
+institutions financières, et le fichier de trajectoires qui le nourrit. Le rapport annonce, en page
+32 du PDF dont le folio imprimé porte 31, que le secteur des produits pétroliers raffinés voit sa
+probabilité de défaut monter de 450 % d'ici 2050, pour une baisse de 72 % de son résultat net. Il
+annonce pour le secteur des cultures 141 %, pour une baisse de 32 %.
 
 Ce module refait le premier maillon, celui du résultat net, qui se déduit entièrement du fichier
-public. Il ne refait pas le second, et c'est important. Le rapport dit page 30 que les points de
-calibration viennent d'évaluations d'emprunteurs faites par les six institutions sur leurs propres
-dossiers. Ces évaluations sont ensuite ajustées à dire d'expert, puis résumées par un modèle de type
-Merton, et elles ne sont pas publiques. Le second maillon est donc **non reconstructible**, et le dépôt
-l'écrit plutôt que de fabriquer un chiffre qui y ressemblerait.
+public. Il ne refait pas le second, et c'est important. Le rapport dit en page 30 du PDF, folio 29,
+que les points de calibration viennent d'évaluations d'emprunteurs faites par les six institutions
+sur leurs propres dossiers. Ces évaluations sont ensuite ajustées à dire d'expert, puis résumées par
+un modèle de type Merton, et elles ne sont pas publiques. Le second maillon est donc **non
+reconstructible**, et le dépôt l'écrit plutôt que de fabriquer un chiffre qui y ressemblerait.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ POSTES = ("Revenue", "Direct emissions costs", "Indirect costs")
 # figure l'écarte.
 AGREGATS = ("Oil & Gas",)
 
-# Ce que le rapport annonce, page 32, pour le Canada en 2050 sous « Below 2°C immediate ».
+# Ce que le rapport annonce, page 32 du PDF (folio 31), pour le Canada en 2050 sous « Below 2°C immediate ».
 PUBLIES = {
     "Refined oil products": {"resultat_net_pct": -72.0, "pd_pct": 450.0},
     "Crops": {"resultat_net_pct": -32.0, "pd_pct": 141.0},
@@ -92,16 +92,22 @@ def variation(table: pd.DataFrame, geographie: str = "Canada", annee: int = 2050
     C'est l'axe horizontal du graphique 16 du rapport, celui que le dépôt cherche à retrouver. La
     colonne `agregat` marque les lignes qui recouvrent d'autres lignes de la même table, pour qu'un
     lecteur qui somme ou qui pondère ne compte pas deux fois la même activité.
+
+    Les deux colonnes de niveau gardent l'unité du fichier de la Banque du Canada, la dizaine de
+    milliards de dollars de 2014, et leur nom la porte. Sans elle, le rapprochement avec
+    `results/cascade_raffinage.csv`, qui est en milliards, se trompe d'un facteur dix.
     """
+    unite = "_10_milliards_usd_2014"
     net = resultat_net(table, geographie, annee)["resultat_net"].unstack("CL_SCENARIO")
     if scenario not in net.columns or REFERENCE not in net.columns:
         raise ValueError(f"scénario absent du fichier : {scenario}")
     lignes = pd.DataFrame({
         "secteur": [FRANCAIS.get(s, s) for s in net.index],
-        "reference": net[REFERENCE].to_numpy(),
-        "scenario": net[scenario].to_numpy(),
+        f"reference{unite}": net[REFERENCE].to_numpy(),
+        f"scenario{unite}": net[scenario].to_numpy(),
     }, index=net.index)
-    lignes["variation_pct"] = 100.0 * (lignes["scenario"] / lignes["reference"] - 1.0)
+    lignes["variation_pct"] = 100.0 * (lignes[f"scenario{unite}"]
+                                       / lignes[f"reference{unite}"] - 1.0)
     lignes["publie_pct"] = [PUBLIES.get(s, {}).get("resultat_net_pct") for s in net.index]
     lignes["ecart_points"] = lignes["variation_pct"] - lignes["publie_pct"]
     lignes["agregat"] = [s in AGREGATS for s in net.index]

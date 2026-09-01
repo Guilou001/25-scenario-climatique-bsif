@@ -110,7 +110,7 @@ def sensibilite(horizon: int = 2045):
     _ecrire(par_horizon().rename(columns={"hausse_pct": "hausse_pct_portefeuille_stylise_seau4_6ans"}),
             "hausse_par_horizon.csv")
     # les deux plafonds et la contribution de la perte en cas de défaut : sans eux, le lecteur voit
-    # un plafond de 7,90 % sous une figure et des hausses de 9,34 % dans le tableau voisin
+    # un plafond de 7,90 % sous une figure et une hausse de 9,31 % au seau 1 dans le tableau voisin
     _ecrire(reconciliation(horizon), "reconciliation_plafond.csv")
     colonne = table.columns[-1]
     typer.echo(f"à {colonne}, seau 1 monte de {table[colonne].iloc[0]:.2f} % et seau 6 de "

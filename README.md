@@ -80,6 +80,10 @@ Quatre fichiers publics, téléchargés par script, jamais commités. Tailles me
 | `climate-transition-scenario-data.csv` | 59 584 observations, 9 géographies, 4 scénarios, 15 secteurs, 66 variables, 2020 à 2050 sans trou | 7 026 127 o | Banque du Canada, usage et copie avec attribution |
 | `BoC-OSFI-Using-Scenario-Analysis...pdf` | le rapport du pilote, 62 pages | 2 407 957 o | Banque du Canada et BSIF |
 
+Deux de ces quatre fichiers sont lus par le code, le classeur d'instructions et le fichier de la
+Banque du Canada. Le classeur à remplir et le rapport du pilote servent de source documentaire, et
+aucun module ni aucun test ne les ouvre.
+
 Comment lire ce tableau, en trois constats. Le premier est que la méthode elle-même n'est pas un
 fichier : elle vit sur une page web du BSIF, formules comprises, et c'est de là que viennent les
 quatre équations codées ici. Le deuxième est que l'adresse du rapport a dû être corrigée : elle est
@@ -128,8 +132,9 @@ Comment lire ce tableau, en trois constats. Le premier est que l'écart le plus 
 l'arithmétique flottante, donc l'égalité. Le deuxième est que les six probabilités et les six pertes
 en cas de défaut de l'horizon 2045 sont retrouvées elles aussi, la première série exactement, la
 seconde à 1,2e-15. Le troisième est que ces chiffres ne sont pas retapés à la main. La commande
-`scc verifier` ré-extrait du classeur téléchargé les huit lignes de ce tableau, plus les
-probabilités, les pertes en cas de défaut, les expositions et les 21 majorations qui les produisent.
+`scc verifier` ré-extrait du classeur d'instructions téléchargé les huit lignes de ce tableau, plus
+les probabilités, les pertes en cas de défaut, les expositions et les 21 majorations qui les
+produisent.
 Ses dix contrôles sortent tous « identique ». Ce que le tableau n'établit pas : l'exemple porte sur
 une seule exposition, et l'accord avec lui ne dit rien des cas que le BSIF ne déroule pas.
 
@@ -184,9 +189,9 @@ logarithmique ; en ordonnée la hausse qu'elle subit, en pourcentage de sa valeu
 tiretée est le plafond `exp(majoration) − 1`, soit 7,90 % pour la majoration de 2046, atteint quand
 la probabilité tend vers zéro. Les points marquent le milieu de chaque seau.
 
-Ce plafond de 7,90 % est plus bas que les 9,34 % du tableau ci-dessus, et deux différences les
-réconcilient. La figure ne porte que la majoration de 2046, la plus faible des vingt que le tableau
-emploie ; le chemin complet monte à 0,086 700 en 2050 puis se prolonge, et son plafond vaut 9,06 %.
+Ce plafond de 7,90 % est plus bas que les 9,31 % du seau 1 dans le tableau ci-dessus, et deux
+différences les réconcilient. La figure ne porte que la majoration de 2046, la plus faible des vingt
+que le tableau emploie ; le chemin complet monte à 0,086 700 en 2050 puis se prolonge, et son plafond vaut 9,06 %.
 Seconde différence, la figure porte la seule probabilité de défaut quand le tableau porte la perte
 attendue, perte en cas de défaut comprise. Cette seconde différence ajoute 0,49 point au seau 1 à
 vingt ans, qui passe de 8,82 % à 9,31 %. Les six lignes du calcul sont dans
@@ -206,7 +211,7 @@ portent sur l'exposition de l'exemple du BSIF.
 
 ### 5.3 Le rapport de 2022 : un maillon se refait, l'autre pas
 
-| Secteur | Résultat net 2050 recalculé | Publié page 32 | Écart |
+| Secteur | Résultat net 2050 recalculé | Publié page 32 du PDF, folio 31 | Écart |
 |---|---:|---:|---:|
 | Produits pétroliers raffinés | **-71,06 %** | -72 % | 0,94 point |
 | Cultures | **-30,11 %** | -32 % | 1,89 point |
@@ -242,12 +247,13 @@ valeurs que le rapport publie, et l'écart est écrit à côté de chacune.
 
 Comment lire cette figure : deux cascades, la même échelle. Elle montre d'où vient la baisse. Les
 coûts directs d'émission ne montent que de **0,45 à 1,04 milliard**, et les coûts indirects baissent
-de **13,14 à 5,21 milliards**. Ce qui s'effondre, ce sont les produits, de 98,4 à 30,8 milliards,
-soit **-68,7 %**. Le prix du carbone ne ruine pas le raffineur ; la disparition de sa demande le
-ruine. Les quatre postes sont dans `results/cascade_raffinage.csv`.
+de **13,14 à 5,21 milliards**. Ce qui s'effondre, ce sont les produits, étiquetés au sommet de la
+première barre de chaque volet, de 98,4 à 30,8 milliards, soit **-68,7 %**. Le prix du carbone ne
+ruine pas le raffineur ; la disparition de sa demande le ruine. Les quatre postes sont dans `results/cascade_raffinage.csv`.
 
-**Ce qui ne se refait pas.** Le rapport dit page 30 que la hausse de probabilité de défaut vient
-d'évaluations d'emprunteurs faites par six institutions sur leurs propres dossiers. Ces évaluations
+**Ce qui ne se refait pas.** Le rapport dit page 30 du PDF, folio 29, que la hausse de probabilité
+de défaut vient d'évaluations d'emprunteurs faites par six institutions sur leurs propres dossiers.
+Ces évaluations
 sont complétées par du jugement d'expert, puis résumées par un modèle de type Merton, et elles ne
 sont pas publiques. Le second maillon est donc **non reconstructible**, et le dépôt l'écrit plutôt
 que de fabriquer un chiffre qui y ressemblerait.
@@ -293,7 +299,7 @@ Comment lire cette figure : le levier requis à gauche, la probabilité de défa
 et la bande grisée est la plage usuelle de volatilité d'actif. Les deux courbes sont tracées à
 l'horizon de cinq ans seulement, une seule ligne du tableau ci-dessus. La courbe de droite s'aplatit
 à gauche parce qu'elle bute sur le plafond de 18,18 %, et non parce que le modèle s'y stabilise. Son
-titre arrondit la borne haute de la bande, 18,1 % à cinq ans, à une fois sur six.
+titre arrondit la borne haute de la bande, 18,1 % à cinq ans, à une fois sur cinq et demi.
 
 ## 6. Reproduire
 
@@ -301,7 +307,7 @@ titre arrondit la borne haute de la bande, 18,1 % à cinq ans, à une fois sur s
 uv sync --locked --all-extras
 uv run pytest                 # 37 tests, dont 36 fermés et sans réseau, moins d'une seconde
 uv run scc fetch              # les quatre fichiers publics, environ 11 Mo
-uv run scc verifier           # les constantes du dépôt contre le classeur du BSIF
+uv run scc verifier           # les constantes du dépôt contre le classeur d'instructions du BSIF
 uv run scc tout               # les quatre calculs et les six figures
 ```
 
@@ -310,10 +316,12 @@ cette vérité est bien celle du régulateur. Un seul test lit `data/raw`, celui
 de valeur de 71,1 % du modèle de Merton à sa mesure ; il est sauté quand le fichier manque. Les
 chiffres de ce README viennent des fichiers de `results/`, sauf ceux que voici. Les chiffres de la
 section 3 et les deux valeurs de l'électricité de la section 5.3 se lisent dans `data/raw/`. Ceux de
-la section 4 et les vingt et une majorations sont les constantes de `src/scc/exemple.py`, que
-`scc verifier` confronte au classeur du BSIF. L'écart de 1,2e-15 sur les pertes en cas de défaut de
-2045 se mesure de la même façon. Les dix contrôles se comptent dans `src/scc/cli.py`, et les
-37 tests dans la sortie de `pytest`. Les quatre chiffres de sensibilité au plancher, au tableau des
+la section 4 et les vingt et une majorations sont les constantes de `src/scc/exemple.py`,
+confrontées au classeur d'instructions du BSIF par `scc verifier`. Ses dix contrôles en sortent
+« identique », donc à écart nul. L'écart de 1,2e-15 sur les pertes en cas de défaut de 2045 est
+d'une autre nature : c'est celui de la série recalculée contre ces constantes, et il se mesure dans
+`tests/test_scse.py`. Les dix contrôles se comptent dans `src/scc/cli.py`, et les 37 tests dans la
+sortie de `pytest`. Les quatre chiffres de sensibilité au plancher, au tableau des
 limites, s'obtiennent en faisant varier la constante `PLANCHER` de `src/scc/sensibilite.py`.
 
 ## 7. Limites, avec leur statut
