@@ -1,20 +1,21 @@
-# L'exercice climatique du BSIF, recalculé : ce que la formule fait aux bons emprunteurs
+# Recalculer le scénario climatique demandé par le BSIF
 
-Depuis 2024, toute institution financière fédérale canadienne doit rendre au BSIF un exercice
-normalisé de scénarios climatiques. Le régulateur publie sa méthode, son classeur et un exemple
-travaillé complet, et aucun dépôt public ne le calcule. Ce dépôt le calcule, le vérifie contre
-l'exemple officiel, puis pose la question que l'exemple ne pose pas.
+Une institution financière canadienne doit estimer ce que différents scénarios climatiques feraient à ses emprunteurs. Pour le crédit, le régulateur transforme une probabilité de défaut de départ, puis recalcule la perte attendue. Le présent projet écrit cette règle à partir des formules publiées et vérifie chaque étape contre l'exemple officiel.
+
+Cette reproduction permet ensuite de poser deux questions que l'exemple ne règle pas. Nous cherchons d'abord quelle catégorie d'emprunteurs subit la plus forte hausse relative. Nous tentons également de reconstruire un résultat publié en 2022 pour le secteur du raffinage.
+
+**Résultat principal.** Les huit nombres de l'exemple du BSIF sont retrouvés avec un écart maximal de 1,2 × 10⁻¹⁰ dollar. À vingt ans, la règle augmente la perte attendue de 9,31 % dans la meilleure catégorie de crédit, contre 1,58 % dans la plus faible, soit un effet relatif 5,9 fois plus grand. En effet, la majoration multiplie la cote de défaut plutôt que la probabilité elle-même. Pour le raffinage, la première étape est retrouvée à -71,06 %, contre -72 % publiés, tandis que la suite ne peut pas être reconstruite avec les données publiques.
+
+Afin d'expliquer ces résultats, nous présenterons d'abord le scénario, les probabilités et les pertes utilisées. Dans un deuxième temps, nous déroulerons la formule du BSIF ligne par ligne. Ensuite, nous comparerons les catégories de crédit et nous reprendrons l'exemple du raffinage. Enfin, nous distinguerons ce qui est reproduit de ce qui ne l'est pas, puis nous présenterons les limites et les commandes.
 
 [![ci](https://github.com/Guilou001/25-scenario-climatique-bsif/actions/workflows/ci.yml/badge.svg)](https://github.com/Guilou001/25-scenario-climatique-bsif/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.12-blue)
 ![licence](https://img.shields.io/badge/code-MIT-green)
 
-**Résultat en une phrase.** Le module de crédit de l'exercice est reproduit depuis les seules
-formules publiées. Il retrouve les huit nombres de l'exemple officiel du BSIF **à moins d'un
-milliardième de dollar près**. Sur cette base, la majoration prescrite fait monter la perte de crédit
-attendue de **9,3 % pour un emprunteur de la meilleure qualité à vingt ans, contre 1,6 % pour le
-pire, soit 5,9 fois moins**. La raison tient à la forme de la formule. La majoration s'ajoute au
-logarithme de la cote de défaut, si bien qu'elle multiplie cette cote et non la probabilité.
+Le rapport détaillé est disponible en PDF : [rapport/rapport.pdf](rapport/rapport.pdf).
+
+<details>
+<summary>Résumé en anglais</summary>
 
 *Summary in English. A from-scratch implementation of the credit module of OSFI's Standardized
 Climate Scenario Exercise, reproducing every figure of the regulator's own worked example to under
@@ -23,7 +24,8 @@ add-on raises expected credit loss 5.9 times more for the best credit quality bu
 worst at twenty years, and a Merton inversion of the 2022 BoC-OSFI pilot's published +450 % default
 probability.*
 
-## 1. La question posée
+</details>
+## 1. La question en détail
 
 Trois questions, dans l'ordre où elles se posent.
 
@@ -56,7 +58,7 @@ Quatre apports.
 
 - **Le module de crédit, écrit depuis les formules publiées** et non depuis le tableur, avec les huit
   nombres de l'exemple officiel retrouvés.
-- **Une carte de sensibilité** qui n'existe nulle part : la hausse de perte attendue par **seau de
+- **Un tableau de sensibilité** qui n'existe nulle part : la hausse de perte attendue par **catégorie de
   qualité de crédit**, la tranche de probabilité de défaut dans laquelle le BSIF range une
   exposition, et par échéance. Elle est calculée sur la seule colonne de majorations publiée.
 - **La reconstruction du premier maillon du rapport de 2022** depuis le fichier public, et la
@@ -311,7 +313,7 @@ uv run scc verifier           # les constantes du dépôt contre le classeur d'i
 uv run scc tout               # les quatre calculs et les six figures
 ```
 
-La vérité connue vit dans `src/scc/exemple.py`, et `scc verifier` est la commande qui prouve que
+Le résultat publié auquel nous comparons le calcul vit dans `src/scc/exemple.py`, et `scc verifier` est la commande qui prouve que
 cette vérité est bien celle du régulateur. Un seul test lit `data/raw`, celui qui rattache la baisse
 de valeur de 71,1 % du modèle de Merton à sa mesure ; il est sauté quand le fichier manque. Les
 chiffres de ce README viennent des fichiers de `results/`, sauf ceux que voici. Les chiffres de la
@@ -329,12 +331,12 @@ limites, s'obtiennent en faisant varier la constante `PLANCHER` de `src/scc/sens
 | Limite | Statut |
 |---|---|
 | Les majorations réelles de probabilité de défaut ne sont fournies qu'aux institutions déclarantes ; l'exemple n'en publie qu'une colonne, charbon, Canada, seau 4 | déclaré ; tout ce dépôt calcule sur cette colonne et sur un portefeuille stylisé, jamais sur une société nommée |
-| La carte de sensibilité applique la majoration du seau 4 à tous les seaux | hypothèse déclarée ; c'est ce qui isole l'effet de la formule, et non une lecture du BSIF |
+| Le tableau de sensibilité applique la majoration de la catégorie 4 à toutes les catégories | hypothèse déclarée ; c'est ce qui isole l'effet de la formule, et non une lecture du BSIF |
 | L'écart de 0,94 et 1,89 point sur les deux valeurs publiées du rapport de 2022 | non expliqué ; arrondi de publication, pondération par l'exposition ou définition du résultat net sont les trois pistes, aucune n'est vérifiée |
 | Le second maillon du rapport de 2022, du résultat net à la probabilité de défaut | non reconstructible ; les évaluations d'emprunteurs des six institutions ne sont pas publiques |
 | L'inversion de Merton suppose que la valeur d'actif suit proportionnellement le résultat net | hypothèse déclarée ; elle répond à une autre question que celle du rapport, et le dépôt ne prétend pas le contraire |
 | Le secteur de l'électricité n'a aucun coût indirect dans le fichier public, alors qu'il en a les produits et les coûts directs d'émission | non trouvé ; son résultat net ne se calcule pas, et il est absent du tableau plutôt que compté zéro |
-| Le premier seau part de zéro, dont le milieu géométrique n'existe pas : la carte de sensibilité lui impose un plancher de 1 point de base, d'où sa probabilité de 0,03 % | hypothèse déclarée ; mesuré en faisant varier ce plancher de 1e-3 à 1e-6, la hausse du seau 1 à vingt ans va de 9,342 % à 9,221 % et le rapport entre extrêmes de 5,902 à 5,825, contre 5,882 publié |
+| La première catégorie part de zéro, dont le milieu géométrique n'existe pas : le tableau de sensibilité lui impose un plancher de 1 point de base, d'où sa probabilité de 0,03 % | hypothèse déclarée ; mesuré en faisant varier ce plancher de 1e-3 à 1e-6, la hausse de la catégorie 1 à vingt ans va de 9,342 % à 9,221 % et le rapport entre extrêmes de 5,902 à 5,825, contre 5,882 publié |
 | « Pétrole et gaz » est la somme de « Pétrole » et de « Gaz » dans le fichier de la Banque du Canada, au dernier chiffre publié près | mesuré ; la ligne reste dans `results/secteurs_resultat_net.csv` avec sa marque `agregat`, et la figure des secteurs l'écarte |
 | Seuls les modules de crédit sont codés, pas ceux de marché, d'immobilier, d'inondation ni de feux de forêt | déclaré ; les quatre autres exemples travaillés du classeur restent ouverts |
 | Le portefeuille stylisé prend un hasard de défaut constant, une perte en cas de défaut de 45 % et un taux de 5 % | hypothèses déclarées ; elles ne mettent aucune structure par terme dans le résultat |

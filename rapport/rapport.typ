@@ -1,4 +1,4 @@
-#set document(title: "L'exercice climatique du BSIF, recalculé : ce que la formule fait aux bons emprunteurs", author: "Guillaume Vaudescal")
+#set document(title: "Recalculer le scénario climatique demandé par le BSIF", author: "Guillaume Vaudescal")
 #set page(
   paper: "a4",
   margin: (x: 2.2cm, y: 2.4cm),
@@ -30,22 +30,30 @@
 
 #align(center)[
   #block(width: 100%)[
-    #text(size: 18pt, weight: "bold")[L'exercice climatique du BSIF, recalculé : ce que la formule fait aux bons emprunteurs]
+    #text(size: 18pt, weight: "bold")[Recalculer le scénario climatique demandé par le BSIF]
     #v(0.6em)
-    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-08-31 · #link("https://github.com/Guilou001/25-scenario-climatique-bsif")[Guilou001/25-scenario-climatique-bsif]]
+    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-09-04 · #link("https://github.com/Guilou001/25-scenario-climatique-bsif")[Guilou001/25-scenario-climatique-bsif]]
   ]
 ]
 #v(1.2em)
 #line(length: 100%, stroke: 0.6pt + luma(190))
 #v(0.8em)
 
-Depuis 2024, toute institution financière fédérale canadienne doit rendre au BSIF un exercice normalisé de scénarios climatiques. Le régulateur publie sa méthode, son classeur et un exemple travaillé complet, et aucun dépôt public ne le calcule. Ce dépôt le calcule, le vérifie contre l'exemple officiel, puis pose la question que l'exemple ne pose pas.
+Une institution financière canadienne doit estimer ce que différents scénarios climatiques feraient à ses emprunteurs. Pour le crédit, le régulateur transforme une probabilité de défaut de départ, puis recalcule la perte attendue. Le présent projet écrit cette règle à partir des formules publiées et vérifie chaque étape contre l'exemple officiel.
 
-*Résultat en une phrase.* Le module de crédit de l'exercice est reproduit depuis les seules formules publiées. Il retrouve les huit nombres de l'exemple officiel du BSIF *à moins d'un milliardième de dollar près*. Sur cette base, la majoration prescrite fait monter la perte de crédit attendue de *9,3 % pour un emprunteur de la meilleure qualité à vingt ans, contre 1,6 % pour le pire, soit 5,9 fois moins*. La raison tient à la forme de la formule. La majoration s'ajoute au logarithme de la cote de défaut, si bien qu'elle multiplie cette cote et non la probabilité.
+Cette reproduction permet ensuite de poser deux questions que l'exemple ne règle pas. Nous cherchons d'abord quelle catégorie d'emprunteurs subit la plus forte hausse relative. Nous tentons également de reconstruire un résultat publié en 2022 pour le secteur du raffinage.
+
+*Résultat principal.* Les huit nombres de l'exemple du BSIF sont retrouvés avec un écart maximal de 1,2 × 10⁻¹⁰ dollar. À vingt ans, la règle augmente la perte attendue de 9,31 % dans la meilleure catégorie de crédit, contre 1,58 % dans la plus faible, soit un effet relatif 5,9 fois plus grand. En effet, la majoration multiplie la cote de défaut plutôt que la probabilité elle-même. Pour le raffinage, la première étape est retrouvée à -71,06 %, contre -72 % publiés, tandis que la suite ne peut pas être reconstruite avec les données publiques.
+
+Afin d'expliquer ces résultats, nous présenterons d'abord le scénario, les probabilités et les pertes utilisées. Dans un deuxième temps, nous déroulerons la formule du BSIF ligne par ligne. Ensuite, nous comparerons les catégories de crédit et nous reprendrons l'exemple du raffinage. Enfin, nous distinguerons ce qui est reproduit de ce qui ne l'est pas, puis nous présenterons les limites et les commandes.
+
+Le rapport détaillé est disponible en PDF : #link("rapport/rapport.pdf")[rapport/rapport.pdf].
+
+== Résumé en anglais
 
 _Summary in English. A from-scratch implementation of the credit module of OSFI's Standardized Climate Scenario Exercise, reproducing every figure of the regulator's own worked example to under a billionth of a dollar, plus two extensions: a sensitivity map showing that a constant logit add-on raises expected credit loss 5.9 times more for the best credit quality bucket than for the worst at twenty years, and a Merton inversion of the 2022 BoC-OSFI pilot's published +450 % default probability._
 
-== 1. La question posée
+== 1. La question en détail
 
 Trois questions, dans l'ordre où elles se posent.
 
@@ -67,7 +75,7 @@ Quatre apports.
 
 nombres de l'exemple officiel retrouvés.
 
-- *Une carte de sensibilité* qui n'existe nulle part : la hausse de perte attendue par \*\*seau de
+- *Un tableau de sensibilité* qui n'existe nulle part : la hausse de perte attendue par \*\*catégorie de
 
 qualité de crédit\*\*, la tranche de probabilité de défaut dans laquelle le BSIF range une exposition, et par échéance. Elle est calculée sur la seule colonne de majorations publiée.
 
@@ -364,7 +372,7 @@ Comment lire cette figure : le levier requis à gauche, la probabilité de défa
 
 #raw("uv sync --locked --all-extras\nuv run pytest                 # 37 tests, dont 36 fermés et sans réseau, moins d'une seconde\nuv run scc fetch              # les quatre fichiers publics, environ 11 Mo\nuv run scc verifier           # les constantes du dépôt contre le classeur d'instructions du BSIF\nuv run scc tout               # les quatre calculs et les six figures", block: true, lang: "bash")
 
-La vérité connue vit dans #raw("src/scc/exemple.py"), et #raw("scc verifier") est la commande qui prouve que cette vérité est bien celle du régulateur. Un seul test lit #raw("data/raw"), celui qui rattache la baisse de valeur de 71,1 % du modèle de Merton à sa mesure ; il est sauté quand le fichier manque. Les chiffres de ce README viennent des fichiers de #raw("results/"), sauf ceux que voici. Les chiffres de la section 3 et les deux valeurs de l'électricité de la section 5.3 se lisent dans #raw("data/raw/"). Ceux de la section 4 et les vingt et une majorations sont les constantes de #raw("src/scc/exemple.py"), confrontées au classeur d'instructions du BSIF par #raw("scc verifier"). Ses dix contrôles en sortent « identique », donc à écart nul. L'écart de 1,2e-15 sur les pertes en cas de défaut de 2045 est d'une autre nature : c'est celui de la série recalculée contre ces constantes, et il se mesure dans #raw("tests/test_scse.py"). Les dix contrôles se comptent dans #raw("src/scc/cli.py"), et les 37 tests dans la sortie de #raw("pytest"). Les quatre chiffres de sensibilité au plancher, au tableau des limites, s'obtiennent en faisant varier la constante #raw("PLANCHER") de #raw("src/scc/sensibilite.py").
+Le résultat publié auquel nous comparons le calcul vit dans #raw("src/scc/exemple.py"), et #raw("scc verifier") est la commande qui prouve que cette vérité est bien celle du régulateur. Un seul test lit #raw("data/raw"), celui qui rattache la baisse de valeur de 71,1 % du modèle de Merton à sa mesure ; il est sauté quand le fichier manque. Les chiffres de ce README viennent des fichiers de #raw("results/"), sauf ceux que voici. Les chiffres de la section 3 et les deux valeurs de l'électricité de la section 5.3 se lisent dans #raw("data/raw/"). Ceux de la section 4 et les vingt et une majorations sont les constantes de #raw("src/scc/exemple.py"), confrontées au classeur d'instructions du BSIF par #raw("scc verifier"). Ses dix contrôles en sortent « identique », donc à écart nul. L'écart de 1,2e-15 sur les pertes en cas de défaut de 2045 est d'une autre nature : c'est celui de la série recalculée contre ces constantes, et il se mesure dans #raw("tests/test_scse.py"). Les dix contrôles se comptent dans #raw("src/scc/cli.py"), et les 37 tests dans la sortie de #raw("pytest"). Les quatre chiffres de sensibilité au plancher, au tableau des limites, s'obtiennent en faisant varier la constante #raw("PLANCHER") de #raw("src/scc/sensibilite.py").
 
 == 7. Limites, avec leur statut
 
@@ -377,7 +385,7 @@ La vérité connue vit dans #raw("src/scc/exemple.py"), et #raw("scc verifier") 
     [*Statut*],
     [Les majorations réelles de probabilité de défaut ne sont fournies qu'aux institutions déclarantes ; l'exemple n'en publie qu'une colonne, charbon, Canada, seau 4],
     [déclaré ; tout ce dépôt calcule sur cette colonne et sur un portefeuille stylisé, jamais sur une société nommée],
-    [La carte de sensibilité applique la majoration du seau 4 à tous les seaux],
+    [Le tableau de sensibilité applique la majoration de la catégorie 4 à toutes les catégories],
     [hypothèse déclarée ; c'est ce qui isole l'effet de la formule, et non une lecture du BSIF],
     [L'écart de 0,94 et 1,89 point sur les deux valeurs publiées du rapport de 2022],
     [non expliqué ; arrondi de publication, pondération par l'exposition ou définition du résultat net sont les trois pistes, aucune n'est vérifiée],
@@ -387,8 +395,8 @@ La vérité connue vit dans #raw("src/scc/exemple.py"), et #raw("scc verifier") 
     [hypothèse déclarée ; elle répond à une autre question que celle du rapport, et le dépôt ne prétend pas le contraire],
     [Le secteur de l'électricité n'a aucun coût indirect dans le fichier public, alors qu'il en a les produits et les coûts directs d'émission],
     [non trouvé ; son résultat net ne se calcule pas, et il est absent du tableau plutôt que compté zéro],
-    [Le premier seau part de zéro, dont le milieu géométrique n'existe pas : la carte de sensibilité lui impose un plancher de 1 point de base, d'où sa probabilité de 0,03 %],
-    [hypothèse déclarée ; mesuré en faisant varier ce plancher de 1e-3 à 1e-6, la hausse du seau 1 à vingt ans va de 9,342 % à 9,221 % et le rapport entre extrêmes de 5,902 à 5,825, contre 5,882 publié],
+    [La première catégorie part de zéro, dont le milieu géométrique n'existe pas : le tableau de sensibilité lui impose un plancher de 1 point de base, d'où sa probabilité de 0,03 %],
+    [hypothèse déclarée ; mesuré en faisant varier ce plancher de 1e-3 à 1e-6, la hausse de la catégorie 1 à vingt ans va de 9,342 % à 9,221 % et le rapport entre extrêmes de 5,902 à 5,825, contre 5,882 publié],
     [« Pétrole et gaz » est la somme de « Pétrole » et de « Gaz » dans le fichier de la Banque du Canada, au dernier chiffre publié près],
     [mesuré ; la ligne reste dans #raw("results/secteurs_resultat_net.csv") avec sa marque #raw("agregat"), et la figure des secteurs l'écarte],
     [Seuls les modules de crédit sont codés, pas ceux de marché, d'immobilier, d'inondation ni de feux de forêt],
